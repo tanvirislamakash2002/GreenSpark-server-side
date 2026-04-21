@@ -1,0 +1,39 @@
+enum ActivityAction {
+  CREATE_IDEA
+  UPDATE_IDEA
+  DELETE_IDEA
+  SUBMIT_IDEA
+  APPROVE_IDEA
+  REJECT_IDEA
+  CAST_VOTE
+  REMOVE_VOTE
+  ADD_COMMENT
+  DELETE_COMMENT
+  MAKE_PAYMENT
+  BOOKMARK_IDEA
+  REMOVE_BOOKMARK
+  USER_LOGIN
+  USER_LOGOUT
+  USER_REGISTER
+  ADMIN_ACTION
+}
+
+model ActivityLog {
+  id          String         @id @default(uuid())
+  action      ActivityAction
+  details     Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime       @default(now())
+
+  // Foreign Keys
+  userId      String
+
+  // Relations
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("activity_logs")
+}

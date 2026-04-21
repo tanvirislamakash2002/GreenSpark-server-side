@@ -1,0 +1,54 @@
+model Comment {
+  id          String   @id @default(uuid())
+  content     String   @db.Text
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Foreign Keys
+  userId      String
+  ideaId      String
+  parentId    String?
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea        Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+  parent      Comment? @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     Comment[] @relation("CommentReplies")
+  reports     CommentReport[]
+
+  @@index([userId])
+  @@index([ideaId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@map("comments")
+}
+
+model CommentReport {
+  id          String   @id @default(uuid())
+  reason      String
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime @default(now())
+  resolvedAt  DateTime?
+
+  // Foreign Keys
+  commentId   String
+  reporterId  String
+  moderatorId String?
+
+  // Relations
+  comment     Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reporter    User     @relation("ReporterReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  moderator   User?    @relation("ModeratorReports", fields: [moderatorId], references: [id])
+
+  @@index([commentId])
+  @@index([reporterId])
+  @@index([status])
+  @@map("comment_reports")
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}

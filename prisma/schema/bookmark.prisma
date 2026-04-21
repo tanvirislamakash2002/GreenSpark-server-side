@@ -1,0 +1,17 @@
+model Bookmark {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+
+  // Foreign Keys
+  userId      String
+  ideaId      String
+
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  idea        Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, ideaId])
+  @@index([userId])
+  @@index([ideaId])
+  @@map("bookmarks")
+}

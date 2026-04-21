@@ -1,0 +1,15 @@
+model Newsletter {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  isSubscribed Boolean @default(true)
+  subscribedAt DateTime @default(now())
+  unsubscribedAt DateTime?
+
+  // Optional: track which user (if registered)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([isSubscribed])
+  @@map("newsletters")
+}

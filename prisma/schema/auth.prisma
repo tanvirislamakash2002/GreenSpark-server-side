@@ -1,0 +1,87 @@
+enum Role {
+  MEMBER
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+model User {
+  id                      String            @id @default(uuid())
+  name                    String
+  email                   String            @unique
+  emailVerified           Boolean           @default(false)
+  image                   String?
+  role                    Role              @default(MEMBER)
+  accountStatus           AccountStatus     @default(ACTIVE)
+  phone                   String?
+  address                 String?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+
+  // Relations
+  ideas                   Idea[]
+  votes                   Vote[]
+  comments                Comment[]
+  payments                Payment[]
+  bookmarks               Bookmark[]
+  newsletterSubscriptions Newsletter[]
+  commentReports          CommentReport[]   @relation("ReporterReports")
+  moderatedReports        CommentReport[]   @relation("ModeratorReports")
+  activityLogs            ActivityLog[]
+
+  sessions                Session[]
+  accounts                Account[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verifications")
+}
