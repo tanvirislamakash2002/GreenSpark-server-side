@@ -2,34 +2,26 @@ import { Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { uploadService } from "./upload.service";
 
-// Configure multer
+// Configure multer for images
 const storage = multer.memoryStorage();
 const fileFilter = (req: any, file: any, cb: any) => {
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
     if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
     } else {
-        cb(new Error("Only image files are allowed"), false);
+        cb(new Error("Only image files are allowed (JPEG, PNG, GIF, WEBP)"), false);
     }
 };
 
 const upload = multer({
     storage,
     fileFilter,
-    limits: { fileSize: 2 * 1024 * 1024 } // 2MB
-});
-
-// Configure multer for documents (larger size)
-const documentUpload = multer({
-    storage,
-    fileFilter,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB
+    limits: { fileSize: 2 * 1024 * 1024 } // 2MB limit
 });
 
 // Upload temporary avatar for signup (no user ID yet)
 const uploadTempAvatar = async (req: Request, res: Response, next: NextFunction) => {
     try {
-
         const file = (req as any).file;
         if (!file) {
             return res.status(400).json({
@@ -47,16 +39,14 @@ const uploadTempAvatar = async (req: Request, res: Response, next: NextFunction)
             data: { url: imageUrl }
         });
     } catch (error) {
-        // next(error);
-        res.status(200).json({
+        return res.status(500).json({
             success: false,
-            message: 'do not try at home'
-        })
+            message: error instanceof Error ? error.message : "Failed to upload image"
+        });
     }
 };
 
-
-// Upload avatar
+// Upload avatar (authenticated users)
 const uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = req.user;
@@ -89,7 +79,7 @@ const uploadAvatar = async (req: Request, res: Response, next: NextFunction) => 
     } catch (error) {
         next(error);
     }
-}
+};
 
 // Remove avatar
 const removeAvatar = async (req: Request, res: Response, next: NextFunction) => {
@@ -114,10 +104,12 @@ const removeAvatar = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
-// Upload store logo (seller)
-const uploadStoreLogo = async (req: Request, res: Response, next: NextFunction) => {
+// Upload idea image
+const uploadIdeaImage = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = req.user;
+        const { ideaId } = req.params;
+
         if (!user) {
             return res.status(401).json({
                 success: false,
@@ -125,10 +117,10 @@ const uploadStoreLogo = async (req: Request, res: Response, next: NextFunction) 
             });
         }
 
-        if (user.role !== "SELLER") {
-            return res.status(403).json({
+        if (!ideaId) {
+            return res.status(400).json({
                 success: false,
-                message: "Only sellers can upload store logos"
+                message: "Idea ID is required"
             });
         }
 
@@ -140,7 +132,8 @@ const uploadStoreLogo = async (req: Request, res: Response, next: NextFunction) 
             });
         }
 
-        const result = await uploadService.uploadStoreLogo(
+        const result = await uploadService.uploadIdeaImage(
+            ideaId as string,
             user.id,
             file.buffer,
             file.originalname
@@ -154,13 +147,13 @@ const uploadStoreLogo = async (req: Request, res: Response, next: NextFunction) 
     } catch (error) {
         next(error);
     }
-}
+};
 
-// Upload product image
-const uploadProductImage = async (req: Request, res: Response, next: NextFunction) => {
+// Upload category image (admin only)
+const uploadCategoryImage = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const user = req.user;
-        const { medicineId } = req.params;
+        const { categoryId } = req.params;
 
         if (!user) {
             return res.status(401).json({
@@ -169,17 +162,17 @@ const uploadProductImage = async (req: Request, res: Response, next: NextFunctio
             });
         }
 
-        if (user.role !== "SELLER") {
+        if (user.role !== "ADMIN") {
             return res.status(403).json({
                 success: false,
-                message: "Only sellers can upload product images"
+                message: "Only admins can upload category images"
             });
         }
 
-        if (!medicineId) {
+        if (!categoryId) {
             return res.status(400).json({
                 success: false,
-                message: "Medicine ID is required"
+                message: "Category ID is required"
             });
         }
 
@@ -191,9 +184,8 @@ const uploadProductImage = async (req: Request, res: Response, next: NextFunctio
             });
         }
 
-        const result = await uploadService.uploadProductImage(
-            medicineId as string,
-            user.id,
+        const result = await uploadService.uploadCategoryImage(
+            categoryId as string,
             file.buffer,
             file.originalname
         );
@@ -206,63 +198,15 @@ const uploadProductImage = async (req: Request, res: Response, next: NextFunctio
     } catch (error) {
         next(error);
     }
-}
-
-// Upload seller document
-const uploadDocument = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-        const user = req.user;
-        const { documentType } = req.body;
-
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: "Unauthorized"
-            });
-        }
-
-        if (user.role !== "SELLER") {
-            return res.status(403).json({
-                success: false,
-                message: "Only sellers can upload documents"
-            });
-        }
-
-        const file = (req as any).file;
-        if (!file) {
-            return res.status(400).json({
-                success: false,
-                message: "No file uploaded"
-            });
-        }
-
-        const result = await uploadService.uploadDocument(
-            user.id,
-            file.buffer,
-            file.originalname,
-            documentType
-        );
-
-        if (result.success) {
-            return res.status(200).json(result);
-        } else {
-            return res.status(400).json(result);
-        }
-    } catch (error) {
-        next(error);
-    }
-}
-
+};
 
 // Export multer middleware
-export const uploadMiddleware = upload.single("avatar");
-export const documentUploadMiddleware = documentUpload.single("file");
+export const uploadMiddleware = upload.single("image");
 
 export const uploadController = {
     uploadTempAvatar,
     uploadAvatar,
     removeAvatar,
-    uploadStoreLogo,
-    uploadProductImage,
-    uploadDocument,
-}
+    uploadIdeaImage,
+    uploadCategoryImage,
+};

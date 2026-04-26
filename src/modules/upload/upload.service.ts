@@ -2,9 +2,9 @@ import FormData from "form-data";
 import axios from "axios";
 import { prisma } from "../../lib/prisma";
 
-// Core upload function
+// Core upload function to ImgBB
 const uploadToImgbb = async (fileBuffer: Buffer, fileName?: string): Promise<string> => {
-    if (!fileBuffer) {
+    if (!fileBuffer || fileBuffer.length === 0) {
         throw new Error("No file provided");
     }
 
@@ -14,7 +14,7 @@ const uploadToImgbb = async (fileBuffer: Buffer, fileName?: string): Promise<str
 
     if (fileName) {
         const name = fileName.split('.')[0];
-        formData.append('name', `upload_${Date.now()}_${name}`);
+        formData.append('name', `greenspark_${Date.now()}_${name}`);
     }
 
     try {
@@ -50,7 +50,8 @@ const uploadAvatar = async (userId: string, fileBuffer: Buffer, fileName?: strin
                 id: true,
                 name: true,
                 email: true,
-                image: true
+                image: true,
+                role: true
             }
         });
 
@@ -81,7 +82,8 @@ const removeAvatar = async (userId: string) => {
                 id: true,
                 name: true,
                 email: true,
-                image: true
+                image: true,
+                role: true
             }
         });
 
@@ -101,111 +103,96 @@ const removeAvatar = async (userId: string) => {
     }
 };
 
-// Upload store logo for seller
-const uploadStoreLogo = async (userId: string, fileBuffer: Buffer, fileName?: string) => {
+// Upload idea image
+const uploadIdeaImage = async (ideaId: string, userId: string, fileBuffer: Buffer, fileName?: string) => {
     try {
-        const imageUrl = await uploadToImgbb(fileBuffer, fileName);
-
-        const updatedSeller = await prisma.seller.update({
-            where: { userId },
-            data: { storeLogo: imageUrl },
-            include: {
-                user: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true
-                    }
-                }
-            }
-        });
-
-        return {
-            success: true,
-            message: "Store logo uploaded successfully",
-            data: {
-                url: updatedSeller.storeLogo,
-                seller: updatedSeller
-            }
-        };
-    } catch (error) {
-        console.error("Store logo upload error:", error);
-        return {
-            success: false,
-            message: error instanceof Error ? error.message : "Failed to upload store logo"
-        };
-    }
-};
-
-// Upload product image
-const uploadProductImage = async (medicineId: string, sellerId: string, fileBuffer: Buffer, fileName?: string) => {
-    try {
-        // Verify medicine belongs to seller
-        const medicine = await prisma.medicine.findFirst({
+        // Verify idea belongs to user
+        const idea = await prisma.idea.findFirst({
             where: {
-                id: medicineId,
-                sellerId
+                id: ideaId,
+                authorId: userId
             }
         });
 
-        if (!medicine) {
+        if (!idea) {
             return {
                 success: false,
-                message: "Medicine not found or unauthorized"
+                message: "Idea not found or unauthorized"
+            };
+        }
+
+        // Only allow image upload for ideas that are not yet approved
+        if (idea.status === 'APPROVED') {
+            return {
+                success: false,
+                message: "Cannot modify approved ideas. Please contact admin."
             };
         }
 
         const imageUrl = await uploadToImgbb(fileBuffer, fileName);
 
-        const updatedMedicine = await prisma.medicine.update({
-            where: { id: medicineId },
+        const updatedIdea = await prisma.idea.update({
+            where: { id: ideaId },
             data: { imageUrl },
             select: {
                 id: true,
-                name: true,
+                title: true,
                 imageUrl: true,
-                price: true
+                status: true
             }
         });
 
         return {
             success: true,
-            message: "Product image uploaded successfully",
-            data: updatedMedicine
+            message: "Idea image uploaded successfully",
+            data: updatedIdea
         };
     } catch (error) {
-        console.error("Product image upload error:", error);
+        console.error("Idea image upload error:", error);
         return {
             success: false,
-            message: error instanceof Error ? error.message : "Failed to upload product image"
+            message: error instanceof Error ? error.message : "Failed to upload idea image"
         };
     }
 };
 
-// Upload seller verification document
-const uploadDocument = async (sellerId: string, fileBuffer: Buffer, fileName?: string, documentType?: string) => {
+// Upload category image (admin only)
+const uploadCategoryImage = async (categoryId: string, fileBuffer: Buffer, fileName?: string) => {
     try {
+        // Verify category exists
+        const category = await prisma.category.findUnique({
+            where: { id: categoryId }
+        });
+
+        if (!category) {
+            return {
+                success: false,
+                message: "Category not found"
+            };
+        }
+
         const imageUrl = await uploadToImgbb(fileBuffer, fileName);
 
-        const document = await prisma.sellerDocument.create({
-            data: {
-                sellerId,
-                documentType: documentType || "BUSINESS_LICENSE",
-                documentUrl: imageUrl,
-                status: "PENDING"
-            }
-        });
+        // Note: You may need to add an imageUrl field to your Category model
+        // For now, this is a placeholder. Add imageUrl to Category model if needed.
+        // const updatedCategory = await prisma.category.update({
+        //     where: { id: categoryId },
+        //     data: { imageUrl }
+        // });
 
         return {
             success: true,
-            message: "Document uploaded successfully",
-            data: document
+            message: "Category image uploaded successfully",
+            data: {
+                categoryId,
+                url: imageUrl
+            }
         };
     } catch (error) {
-        console.error("Document upload error:", error);
+        console.error("Category image upload error:", error);
         return {
             success: false,
-            message: error instanceof Error ? error.message : "Failed to upload document"
+            message: error instanceof Error ? error.message : "Failed to upload category image"
         };
     }
 };
@@ -214,7 +201,6 @@ export const uploadService = {
     uploadToImgbb,
     uploadAvatar,
     removeAvatar,
-    uploadStoreLogo,
-    uploadProductImage,
-    uploadDocument
+    uploadIdeaImage,
+    uploadCategoryImage,
 };

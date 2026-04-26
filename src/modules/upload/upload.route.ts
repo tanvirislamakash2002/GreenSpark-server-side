@@ -1,49 +1,45 @@
 import express, { Router } from "express";
 import auth from "../../middlewares/auth";
-import { uploadController, uploadMiddleware, documentUploadMiddleware } from "./upload.controller";
+import { uploadController, uploadMiddleware } from "./upload.controller";
 import { Role } from "../../generated/prisma/enums";
 
 const router = express.Router();
 
+// Public route - temporary avatar upload (for registration)
 router.post(
     "/avatar/temp",
     uploadMiddleware,
     uploadController.uploadTempAvatar
 );
 
-// Protected routes
+// Protected routes - require authentication
 router.post(
     "/avatar",
-    auth(Role.ADMIN, Role.SELLER, Role.CUSTOMER),
+    auth(Role.MEMBER, Role.ADMIN),
     uploadMiddleware,
     uploadController.uploadAvatar
 );
 
 router.delete(
     "/avatar",
-    auth(Role.ADMIN, Role.SELLER, Role.CUSTOMER),
+    auth(Role.MEMBER, Role.ADMIN),
     uploadController.removeAvatar
 );
 
+// Idea image upload (for members creating/editing ideas)
 router.post(
-    "/store-logo",
-    auth(Role.SELLER),
+    "/idea-image/:ideaId",
+    auth(Role.MEMBER),
     uploadMiddleware,
-    uploadController.uploadStoreLogo
+    uploadController.uploadIdeaImage
 );
 
+// Category image upload (admin only)
 router.post(
-    "/product-image/:medicineId",
-    auth(Role.SELLER),
+    "/category-image/:categoryId",
+    auth(Role.ADMIN),
     uploadMiddleware,
-    uploadController.uploadProductImage
-);
-
-router.post(
-    "/document",
-    auth(Role.SELLER),
-    documentUploadMiddleware,
-    uploadController.uploadDocument
+    uploadController.uploadCategoryImage
 );
 
 export const uploadRouter: Router = router;
