@@ -17,6 +17,7 @@ model Idea {
   price             Float?
   feedback          String?     @db.Text
   viewCount         Int         @default(0)
+  voteScore         Int         @default(0)
   publishedAt       DateTime?
   rejectedAt        DateTime?
   createdAt         DateTime    @default(now())
@@ -36,5 +37,6 @@ model Idea {
   @@index([authorId])
   @@index([status])
   @@index([createdAt])
+  @@index([voteScore])
   @@map("ideas")
 }

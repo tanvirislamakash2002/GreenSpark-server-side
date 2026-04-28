@@ -5,7 +5,8 @@ import cors from "cors"
 import errorHandler from "./middlewares/globalErrorHandler";
 import { notFound } from "./middlewares/notFound";
 import { uploadRouter } from "./modules/upload/upload.route";
-import { memberRouter } from "./modules/member/member.route";
+import { memberRouter } from "./modules/dashboard/member/member.route";
+import { adminRouter } from "./modules/dashboard/admin/admin.route";
 
 const app: Application = express()
 
@@ -44,6 +45,7 @@ app.use(express.json())
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
 app.use("/api/v1/member", memberRouter);
+app.use("/api/v1/admin", adminRouter);
 app.use('/api/v1/upload', uploadRouter);
 
 
