@@ -173,9 +173,9 @@ const deleteCategory = async (req: Request, res: Response, next: NextFunction) =
 };
 
 const checkSlug = async (req: Request, res: Response, next: NextFunction) => {
+
     try {
         const { slug, excludeId } = req.query;
-
         if (!slug) {
             return res.status(400).json({
                 success: false,

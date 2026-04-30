@@ -1641,6 +1641,7 @@ export const IdeaScalarFieldEnum = {
   feedback: 'feedback',
   viewCount: 'viewCount',
   voteScore: 'voteScore',
+  commentCount: 'commentCount',
   publishedAt: 'publishedAt',
   rejectedAt: 'rejectedAt',
   createdAt: 'createdAt',

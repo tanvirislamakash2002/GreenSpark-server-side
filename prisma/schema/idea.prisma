@@ -18,6 +18,7 @@ model Idea {
   feedback          String?     @db.Text
   viewCount         Int         @default(0)
   voteScore         Int         @default(0)
+  commentCount      Int         @default(0)
   publishedAt       DateTime?
   rejectedAt        DateTime?
   createdAt         DateTime    @default(now())

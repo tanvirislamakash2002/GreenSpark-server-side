@@ -30,12 +30,14 @@ export type IdeaAvgAggregateOutputType = {
   price: number | null
   viewCount: number | null
   voteScore: number | null
+  commentCount: number | null
 }
 
 export type IdeaSumAggregateOutputType = {
   price: number | null
   viewCount: number | null
   voteScore: number | null
+  commentCount: number | null
 }
 
 export type IdeaMinAggregateOutputType = {
@@ -51,6 +53,7 @@ export type IdeaMinAggregateOutputType = {
   feedback: string | null
   viewCount: number | null
   voteScore: number | null
+  commentCount: number | null
   publishedAt: Date | null
   rejectedAt: Date | null
   createdAt: Date | null
@@ -71,6 +74,7 @@ export type IdeaMaxAggregateOutputType = {
   feedback: string | null
   viewCount: number | null
   voteScore: number | null
+  commentCount: number | null
   publishedAt: Date | null
   rejectedAt: Date | null
   createdAt: Date | null
@@ -91,6 +95,7 @@ export type IdeaCountAggregateOutputType = {
   feedback: number
   viewCount: number
   voteScore: number
+  commentCount: number
   publishedAt: number
   rejectedAt: number
   createdAt: number
@@ -104,12 +109,14 @@ export type IdeaAvgAggregateInputType = {
   price?: true
   viewCount?: true
   voteScore?: true
+  commentCount?: true
 }
 
 export type IdeaSumAggregateInputType = {
   price?: true
   viewCount?: true
   voteScore?: true
+  commentCount?: true
 }
 
 export type IdeaMinAggregateInputType = {
@@ -125,6 +132,7 @@ export type IdeaMinAggregateInputType = {
   feedback?: true
   viewCount?: true
   voteScore?: true
+  commentCount?: true
   publishedAt?: true
   rejectedAt?: true
   createdAt?: true
@@ -145,6 +153,7 @@ export type IdeaMaxAggregateInputType = {
   feedback?: true
   viewCount?: true
   voteScore?: true
+  commentCount?: true
   publishedAt?: true
   rejectedAt?: true
   createdAt?: true
@@ -165,6 +174,7 @@ export type IdeaCountAggregateInputType = {
   feedback?: true
   viewCount?: true
   voteScore?: true
+  commentCount?: true
   publishedAt?: true
   rejectedAt?: true
   createdAt?: true
@@ -272,6 +282,7 @@ export type IdeaGroupByOutputType = {
   feedback: string | null
   viewCount: number
   voteScore: number
+  commentCount: number
   publishedAt: Date | null
   rejectedAt: Date | null
   createdAt: Date
@@ -315,6 +326,7 @@ export type IdeaWhereInput = {
   feedback?: Prisma.StringNullableFilter<"Idea"> | string | null
   viewCount?: Prisma.IntFilter<"Idea"> | number
   voteScore?: Prisma.IntFilter<"Idea"> | number
+  commentCount?: Prisma.IntFilter<"Idea"> | number
   publishedAt?: Prisma.DateTimeNullableFilter<"Idea"> | Date | string | null
   rejectedAt?: Prisma.DateTimeNullableFilter<"Idea"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Idea"> | Date | string
@@ -341,6 +353,7 @@ export type IdeaOrderByWithRelationInput = {
   feedback?: Prisma.SortOrderInput | Prisma.SortOrder
   viewCount?: Prisma.SortOrder
   voteScore?: Prisma.SortOrder
+  commentCount?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   rejectedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -370,6 +383,7 @@ export type IdeaWhereUniqueInput = Prisma.AtLeast<{
   feedback?: Prisma.StringNullableFilter<"Idea"> | string | null
   viewCount?: Prisma.IntFilter<"Idea"> | number
   voteScore?: Prisma.IntFilter<"Idea"> | number
+  commentCount?: Prisma.IntFilter<"Idea"> | number
   publishedAt?: Prisma.DateTimeNullableFilter<"Idea"> | Date | string | null
   rejectedAt?: Prisma.DateTimeNullableFilter<"Idea"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Idea"> | Date | string
@@ -396,6 +410,7 @@ export type IdeaOrderByWithAggregationInput = {
   feedback?: Prisma.SortOrderInput | Prisma.SortOrder
   viewCount?: Prisma.SortOrder
   voteScore?: Prisma.SortOrder
+  commentCount?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   rejectedAt?: Prisma.SortOrderInput | Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -424,6 +439,7 @@ export type IdeaScalarWhereWithAggregatesInput = {
   feedback?: Prisma.StringNullableWithAggregatesFilter<"Idea"> | string | null
   viewCount?: Prisma.IntWithAggregatesFilter<"Idea"> | number
   voteScore?: Prisma.IntWithAggregatesFilter<"Idea"> | number
+  commentCount?: Prisma.IntWithAggregatesFilter<"Idea"> | number
   publishedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Idea"> | Date | string | null
   rejectedAt?: Prisma.DateTimeNullableWithAggregatesFilter<"Idea"> | Date | string | null
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"Idea"> | Date | string
@@ -444,6 +460,7 @@ export type IdeaCreateInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -469,6 +486,7 @@ export type IdeaUncheckedCreateInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -494,6 +512,7 @@ export type IdeaUpdateInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -519,6 +538,7 @@ export type IdeaUncheckedUpdateInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -544,6 +564,7 @@ export type IdeaCreateManyInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -564,6 +585,7 @@ export type IdeaUpdateManyMutationInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -583,6 +605,7 @@ export type IdeaUncheckedUpdateManyInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -618,6 +641,7 @@ export type IdeaCountOrderByAggregateInput = {
   feedback?: Prisma.SortOrder
   viewCount?: Prisma.SortOrder
   voteScore?: Prisma.SortOrder
+  commentCount?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrder
   rejectedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -629,6 +653,7 @@ export type IdeaAvgOrderByAggregateInput = {
   price?: Prisma.SortOrder
   viewCount?: Prisma.SortOrder
   voteScore?: Prisma.SortOrder
+  commentCount?: Prisma.SortOrder
 }
 
 export type IdeaMaxOrderByAggregateInput = {
@@ -644,6 +669,7 @@ export type IdeaMaxOrderByAggregateInput = {
   feedback?: Prisma.SortOrder
   viewCount?: Prisma.SortOrder
   voteScore?: Prisma.SortOrder
+  commentCount?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrder
   rejectedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -664,6 +690,7 @@ export type IdeaMinOrderByAggregateInput = {
   feedback?: Prisma.SortOrder
   viewCount?: Prisma.SortOrder
   voteScore?: Prisma.SortOrder
+  commentCount?: Prisma.SortOrder
   publishedAt?: Prisma.SortOrder
   rejectedAt?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
@@ -675,6 +702,7 @@ export type IdeaSumOrderByAggregateInput = {
   price?: Prisma.SortOrder
   viewCount?: Prisma.SortOrder
   voteScore?: Prisma.SortOrder
+  commentCount?: Prisma.SortOrder
 }
 
 export type IdeaCreateNestedManyWithoutAuthorInput = {
@@ -822,6 +850,7 @@ export type IdeaCreateWithoutAuthorInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -846,6 +875,7 @@ export type IdeaUncheckedCreateWithoutAuthorInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -899,6 +929,7 @@ export type IdeaScalarWhereInput = {
   feedback?: Prisma.StringNullableFilter<"Idea"> | string | null
   viewCount?: Prisma.IntFilter<"Idea"> | number
   voteScore?: Prisma.IntFilter<"Idea"> | number
+  commentCount?: Prisma.IntFilter<"Idea"> | number
   publishedAt?: Prisma.DateTimeNullableFilter<"Idea"> | Date | string | null
   rejectedAt?: Prisma.DateTimeNullableFilter<"Idea"> | Date | string | null
   createdAt?: Prisma.DateTimeFilter<"Idea"> | Date | string
@@ -919,6 +950,7 @@ export type IdeaCreateWithoutBookmarksInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -943,6 +975,7 @@ export type IdeaUncheckedCreateWithoutBookmarksInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -983,6 +1016,7 @@ export type IdeaUpdateWithoutBookmarksInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1007,6 +1041,7 @@ export type IdeaUncheckedUpdateWithoutBookmarksInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1031,6 +1066,7 @@ export type IdeaCreateWithoutCategoriesInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -1055,6 +1091,7 @@ export type IdeaUncheckedCreateWithoutCategoriesInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -1095,6 +1132,7 @@ export type IdeaUpdateWithoutCategoriesInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1119,6 +1157,7 @@ export type IdeaUncheckedUpdateWithoutCategoriesInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1143,6 +1182,7 @@ export type IdeaCreateWithoutCommentsInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -1167,6 +1207,7 @@ export type IdeaUncheckedCreateWithoutCommentsInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -1207,6 +1248,7 @@ export type IdeaUpdateWithoutCommentsInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1231,6 +1273,7 @@ export type IdeaUncheckedUpdateWithoutCommentsInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1255,6 +1298,7 @@ export type IdeaCreateWithoutPaymentsInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -1279,6 +1323,7 @@ export type IdeaUncheckedCreateWithoutPaymentsInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -1319,6 +1364,7 @@ export type IdeaUpdateWithoutPaymentsInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1343,6 +1389,7 @@ export type IdeaUncheckedUpdateWithoutPaymentsInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1367,6 +1414,7 @@ export type IdeaCreateWithoutVotesInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -1391,6 +1439,7 @@ export type IdeaUncheckedCreateWithoutVotesInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -1431,6 +1480,7 @@ export type IdeaUpdateWithoutVotesInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1455,6 +1505,7 @@ export type IdeaUncheckedUpdateWithoutVotesInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1479,6 +1530,7 @@ export type IdeaCreateManyAuthorInput = {
   feedback?: string | null
   viewCount?: number
   voteScore?: number
+  commentCount?: number
   publishedAt?: Date | string | null
   rejectedAt?: Date | string | null
   createdAt?: Date | string
@@ -1498,6 +1550,7 @@ export type IdeaUpdateWithoutAuthorInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1522,6 +1575,7 @@ export type IdeaUncheckedUpdateWithoutAuthorInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1546,6 +1600,7 @@ export type IdeaUncheckedUpdateManyWithoutAuthorInput = {
   feedback?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   viewCount?: Prisma.IntFieldUpdateOperationsInput | number
   voteScore?: Prisma.IntFieldUpdateOperationsInput | number
+  commentCount?: Prisma.IntFieldUpdateOperationsInput | number
   publishedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   rejectedAt?: Prisma.NullableDateTimeFieldUpdateOperationsInput | Date | string | null
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
@@ -1632,6 +1687,7 @@ export type IdeaSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   feedback?: boolean
   viewCount?: boolean
   voteScore?: boolean
+  commentCount?: boolean
   publishedAt?: boolean
   rejectedAt?: boolean
   createdAt?: boolean
@@ -1659,6 +1715,7 @@ export type IdeaSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   feedback?: boolean
   viewCount?: boolean
   voteScore?: boolean
+  commentCount?: boolean
   publishedAt?: boolean
   rejectedAt?: boolean
   createdAt?: boolean
@@ -1680,6 +1737,7 @@ export type IdeaSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   feedback?: boolean
   viewCount?: boolean
   voteScore?: boolean
+  commentCount?: boolean
   publishedAt?: boolean
   rejectedAt?: boolean
   createdAt?: boolean
@@ -1701,6 +1759,7 @@ export type IdeaSelectScalar = {
   feedback?: boolean
   viewCount?: boolean
   voteScore?: boolean
+  commentCount?: boolean
   publishedAt?: boolean
   rejectedAt?: boolean
   createdAt?: boolean
@@ -1708,7 +1767,7 @@ export type IdeaSelectScalar = {
   authorId?: boolean
 }
 
-export type IdeaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "problemStatement" | "solution" | "description" | "imageUrl" | "status" | "isPaid" | "price" | "feedback" | "viewCount" | "voteScore" | "publishedAt" | "rejectedAt" | "createdAt" | "updatedAt" | "authorId", ExtArgs["result"]["idea"]>
+export type IdeaOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "title" | "problemStatement" | "solution" | "description" | "imageUrl" | "status" | "isPaid" | "price" | "feedback" | "viewCount" | "voteScore" | "commentCount" | "publishedAt" | "rejectedAt" | "createdAt" | "updatedAt" | "authorId", ExtArgs["result"]["idea"]>
 export type IdeaInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   author?: boolean | Prisma.UserDefaultArgs<ExtArgs>
   categories?: boolean | Prisma.Idea$categoriesArgs<ExtArgs>
@@ -1748,6 +1807,7 @@ export type $IdeaPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     feedback: string | null
     viewCount: number
     voteScore: number
+    commentCount: number
     publishedAt: Date | null
     rejectedAt: Date | null
     createdAt: Date
@@ -2194,6 +2254,7 @@ export interface IdeaFieldRefs {
   readonly feedback: Prisma.FieldRef<"Idea", 'String'>
   readonly viewCount: Prisma.FieldRef<"Idea", 'Int'>
   readonly voteScore: Prisma.FieldRef<"Idea", 'Int'>
+  readonly commentCount: Prisma.FieldRef<"Idea", 'Int'>
   readonly publishedAt: Prisma.FieldRef<"Idea", 'DateTime'>
   readonly rejectedAt: Prisma.FieldRef<"Idea", 'DateTime'>
   readonly createdAt: Prisma.FieldRef<"Idea", 'DateTime'>
