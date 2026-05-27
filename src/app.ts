@@ -10,6 +10,7 @@ import { adminRouter } from "./modules/dashboard/admin/admin.route";
 import { categoryRouter } from "./modules/category/category.route";
 import { ideasRouter } from "./modules/ideas/ideas.route";
 import { statsRouter } from "./modules/stats/stats.route";
+import { newsletterRouter } from "./modules/newsletter/newsletter.route";
 
 const app: Application = express()
 
@@ -56,6 +57,8 @@ app.use("/api/v1/ideas", ideasRouter);
 app.use("/api/v1/member", memberRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/stats", statsRouter);
+app.use("/api/v1/newsletter", newsletterRouter);
+
 app.use('/api/v1/upload', uploadRouter);
 
 app.get("/", (req, res) => {
