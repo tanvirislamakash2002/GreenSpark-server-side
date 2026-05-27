@@ -9,11 +9,16 @@ import { memberRouter } from "./modules/dashboard/member/member.route";
 import { adminRouter } from "./modules/dashboard/admin/admin.route";
 import { categoryRouter } from "./modules/category/category.route";
 import { ideasRouter } from "./modules/ideas/ideas.route";
+import { statsRouter } from "./modules/stats/stats.route";
 
 const app: Application = express()
 
 
 const allowedOrigins = [
+    "http://localhost:3000",
+    "http://localhost:5000",
+    "https://greenspark1.vercel.app",
+    "https://greenspark-server.vercel.app",
     process.env.APP_URL || "http://localhost:3000",
     process.env.PROD_APP_URL, // Production frontend URL
 ].filter(Boolean);
@@ -50,8 +55,8 @@ app.use("/api/v1/categories", categoryRouter);
 app.use("/api/v1/ideas", ideasRouter);
 app.use("/api/v1/member", memberRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/stats", statsRouter);
 app.use('/api/v1/upload', uploadRouter);
-
 
 app.get("/", (req, res) => {
     res.send("Hello, World!")

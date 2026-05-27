@@ -83,6 +83,23 @@ const getCategoryBySlug = async (req: Request, res: Response, next: NextFunction
     }
 };
 
+const getCategoryCounts = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const result = await categoryService.getCategoryCounts();
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: result.data,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const createCategory = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { name, slug, description, imageUrl } = req.body;
@@ -199,6 +216,7 @@ export const categoryController = {
     getAllCategories,
     getCategoryById,
     getCategoryBySlug,
+    getCategoryCounts,
     createCategory,
     updateCategory,
     deleteCategory,

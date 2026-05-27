@@ -21,19 +21,20 @@ export const auth = betterAuth({
     plugins: [
         bearer(),
     ],
-    baseURL: process.env.BETTER_AUTH_URL,
+    baseURL: process.env.BETTER_AUTH_URL ||"https://greenspark-server.vercel.app",
     trustedOrigins: [
         "http://localhost:3000",
         "https://greenspark.vercel.app",
+        "https://greenspark-server.vercel.app",
+        "https://greenspark.vercel.app/api/auth/callback/google",
     ],
     cookie: {
         name: "better-auth",
         attributes: {
-            sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+            sameSite: "none",
             secure: process.env.NODE_ENV === "production",
         }
     },
-    // ✅ Fix 1: Remove isActive and use correct role default
     user: {
         additionalFields: {
             role: {
@@ -48,22 +49,6 @@ export const auth = betterAuth({
             address: {
                 type: "string",
                 required: false,
-            },
-        },
-    },
-    databaseHooks: {
-        user: {
-            create: {
-                before: (user) => {
-                    const { isActive, ...sanitizedUser } = user as any;
-                    return sanitizedUser;
-                },
-            },
-            update: {
-                before: (user) => {
-                    const { isActive, ...sanitizedUser } = user as any;
-                    return sanitizedUser;
-                },
             },
         },
     },

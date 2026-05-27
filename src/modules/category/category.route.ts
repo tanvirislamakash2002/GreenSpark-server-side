@@ -30,8 +30,8 @@ router.delete(
 // ============ Public Routes (No Authentication Required) ============
 router.get("/", categoryController.getCategories);
 router.get("/all", categoryController.getAllCategories);
+router.get("/counts", categoryController.getCategoryCounts);
 router.get("/:id", categoryController.getCategoryById);
 router.get("/slug/:slug", categoryController.getCategoryBySlug);
-
 
 export const categoryRouter: Router = router;

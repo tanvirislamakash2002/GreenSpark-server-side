@@ -78,7 +78,6 @@ const getIdeas = async (params: {
                 },
             },
         });
-
         // Get total count
         const totalItems = await prisma.idea.count({ where });
 
@@ -148,8 +147,14 @@ const getFeaturedIdeas = async (limit: number) => {
             description: idea.description,
             imageUrl: idea.imageUrl,
             voteScore: idea.voteScore,
+            viewCount: idea.viewCount,
+            isPaid: idea.isPaid,
             author: idea.author,
-            category: idea.categories[0]?.category,
+            categories: idea.categories.map(c => ({
+                id: c.category.id,
+                name: c.category.name,
+                slug: c.category.slug,
+            })) || [],  // Fallback to empty array
             createdAt: idea.createdAt,
         }));
 

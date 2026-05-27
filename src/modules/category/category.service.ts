@@ -189,6 +189,33 @@ const getCategoryBySlug = async (slug: string) => {
     }
 };
 
+const getCategoryCounts = async () => {
+    try {
+        // Get all categories with their idea counts
+        const categories = await prisma.category.findMany({
+            select: {
+                slug: true,
+                ideas: {
+                    select: { ideaId: true },
+                },
+            },
+        });
+
+        const counts = categories.map(cat => ({
+            slug: cat.slug,
+            count: cat.ideas.length,
+        }));
+
+        return {
+            success: true,
+            data: counts,
+        };
+    } catch (error) {
+        console.error("Get category counts error:", error);
+        return { success: false, message: "Failed to fetch category counts" };
+    }
+};
+
 const createCategory = async (data: {
     name: string;
     slug: string;
@@ -403,6 +430,7 @@ export const categoryService = {
     getAllCategories,
     getCategoryById,
     getCategoryBySlug,
+    getCategoryCounts,
     createCategory,
     updateCategory,
     deleteCategory,
