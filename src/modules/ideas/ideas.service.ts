@@ -1,4 +1,4 @@
-import { Prisma } from "../../generated/prisma/client";
+import { IdeaStatus, Prisma } from "../../generated/prisma/client";
 import { prisma } from "../../lib/prisma";
 
 const getIdeas = async (params: {
@@ -374,6 +374,7 @@ const createIdea = async (
         isPaid: boolean;
         price: number | null;
         categoryId: string;
+        status:IdeaStatus
     }
 ) => {
     try {
@@ -394,7 +395,7 @@ const createIdea = async (
                 solution: data.solution,
                 description: data.description,
                 imageUrl: data.imageUrl || null,
-                status: 'DRAFT',
+                status: data?.status ||'DRAFT',
                 isPaid: data.isPaid,
                 price: data.price,
                 authorId: userId,

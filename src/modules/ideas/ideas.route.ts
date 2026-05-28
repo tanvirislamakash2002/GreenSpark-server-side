@@ -15,7 +15,7 @@ router.get("/slug/:slug", ideasController.getIdeaBySlug);
 
 // ============ Member Only Routes ============
 router.post("/", auth(Role.MEMBER), ideasController.createIdea);
-router.patch("/:id", auth(Role.MEMBER), ideasController.updateIdea);
+router.patch("/member/:id", auth(Role.MEMBER), ideasController.updateIdea);
 router.delete("/:id", auth(Role.MEMBER), ideasController.deleteIdea);
 router.patch("/:id/submit", auth(Role.MEMBER), ideasController.submitIdea);
 

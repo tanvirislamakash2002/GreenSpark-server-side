@@ -141,7 +141,7 @@ const getIdeaBySlug = async (req: Request, res: Response, next: NextFunction) =>
 const createIdea = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.user!.id;
-        const { title, problemStatement, solution, description, imageUrl, isPaid, price, categoryId } = req.body;
+        const { title, problemStatement, solution, description, imageUrl, isPaid, price, categoryId, status } = req.body;
 
         // Validation
         if (!title || title.length < 5) {
@@ -190,6 +190,7 @@ const createIdea = async (req: Request, res: Response, next: NextFunction) => {
             isPaid: isPaid || false,
             price: isPaid ? price : null,
             categoryId,
+            status
         });
 
         if (!result.success) {

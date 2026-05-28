@@ -7,7 +7,7 @@ import {
 
 // src/app.ts
 import { toNodeHandler } from "better-auth/node";
-import express6 from "express";
+import express8 from "express";
 import cors from "cors";
 
 // src/middlewares/globalErrorHandler.ts
@@ -1600,6 +1600,29 @@ var getCategoryBySlug = async (slug) => {
     return { success: false, message: "Failed to fetch category" };
   }
 };
+var getCategoryCounts = async () => {
+  try {
+    const categories = await prisma.category.findMany({
+      select: {
+        slug: true,
+        ideas: {
+          select: { ideaId: true }
+        }
+      }
+    });
+    const counts = categories.map((cat) => ({
+      slug: cat.slug,
+      count: cat.ideas.length
+    }));
+    return {
+      success: true,
+      data: counts
+    };
+  } catch (error) {
+    console.error("Get category counts error:", error);
+    return { success: false, message: "Failed to fetch category counts" };
+  }
+};
 var createCategory = async (data) => {
   try {
     const existingByName = await prisma.category.findUnique({
@@ -1764,6 +1787,7 @@ var categoryService = {
   getAllCategories,
   getCategoryById,
   getCategoryBySlug,
+  getCategoryCounts,
   createCategory,
   updateCategory,
   deleteCategory,
@@ -1831,6 +1855,20 @@ var getCategoryBySlug2 = async (req, res, next) => {
     const result = await categoryService.getCategoryBySlug(slug);
     if (!result.success) {
       return res.status(404).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getCategoryCounts2 = async (req, res, next) => {
+  try {
+    const result = await categoryService.getCategoryCounts();
+    if (!result.success) {
+      return res.status(400).json(result);
     }
     return res.status(200).json({
       success: true,
@@ -1936,6 +1974,7 @@ var categoryController = {
   getAllCategories: getAllCategories2,
   getCategoryById: getCategoryById2,
   getCategoryBySlug: getCategoryBySlug2,
+  getCategoryCounts: getCategoryCounts2,
   createCategory: createCategory2,
   updateCategory: updateCategory2,
   deleteCategory: deleteCategory2,
@@ -1966,6 +2005,7 @@ router4.delete(
 );
 router4.get("/", categoryController.getCategories);
 router4.get("/all", categoryController.getAllCategories);
+router4.get("/counts", categoryController.getCategoryCounts);
 router4.get("/:id", categoryController.getCategoryById);
 router4.get("/slug/:slug", categoryController.getCategoryBySlug);
 var categoryRouter = router4;
@@ -2097,8 +2137,15 @@ var getFeaturedIdeas = async (limit) => {
       description: idea.description,
       imageUrl: idea.imageUrl,
       voteScore: idea.voteScore,
+      viewCount: idea.viewCount,
+      isPaid: idea.isPaid,
       author: idea.author,
-      category: idea.categories[0]?.category,
+      categories: idea.categories.map((c) => ({
+        id: c.category.id,
+        name: c.category.name,
+        slug: c.category.slug
+      })) || [],
+      // Fallback to empty array
       createdAt: idea.createdAt
     }));
     return { success: true, data: transformedIdeas };
@@ -2901,8 +2948,239 @@ router5.patch("/:id/reject", auth_default(Role.ADMIN), ideasController.rejectIde
 router5.patch("/:id/feature", auth_default(Role.ADMIN), ideasController.featureIdea);
 var ideasRouter = router5;
 
+// src/modules/stats/stats.route.ts
+import express6 from "express";
+
+// src/modules/stats/stats.service.ts
+var getPlatformStats = async () => {
+  try {
+    const [totalIdeas, activeMembers, approvedIdeas, totalCategories] = await Promise.all([
+      prisma.idea.count(),
+      prisma.user.count({ where: { accountStatus: "ACTIVE" } }),
+      prisma.idea.count({ where: { status: "APPROVED" } }),
+      prisma.category.count()
+    ]);
+    return {
+      success: true,
+      data: {
+        totalIdeas,
+        activeMembers,
+        approvedIdeas,
+        totalCategories
+      }
+    };
+  } catch (error) {
+    console.error("Get platform stats error:", error);
+    return { success: false, message: "Failed to fetch platform stats" };
+  }
+};
+var statsService = {
+  getPlatformStats
+};
+
+// src/modules/stats/stats.controller.ts
+var getPlatformStats2 = async (req, res, next) => {
+  try {
+    const result = await statsService.getPlatformStats();
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var statsController = {
+  getPlatformStats: getPlatformStats2
+};
+
+// src/modules/stats/stats.route.ts
+var router6 = express6.Router();
+router6.get("/platform", statsController.getPlatformStats);
+var statsRouter = router6;
+
+// src/modules/newsletter/newsletter.route.ts
+import express7 from "express";
+
+// src/modules/newsletter/newsletter.service.ts
+var subscribe = async (email) => {
+  try {
+    const existing = await prisma.newsletter.findUnique({
+      where: { email }
+    });
+    if (existing) {
+      if (!existing.isSubscribed) {
+        await prisma.newsletter.update({
+          where: { email },
+          data: {
+            isSubscribed: true,
+            unsubscribedAt: null
+          }
+        });
+        return {
+          success: true,
+          message: "Successfully resubscribed to newsletter!"
+        };
+      }
+      return {
+        success: false,
+        message: "This email is already subscribed to our newsletter."
+      };
+    }
+    await prisma.newsletter.create({
+      data: {
+        email,
+        isSubscribed: true,
+        subscribedAt: /* @__PURE__ */ new Date()
+      }
+    });
+    return {
+      success: true,
+      message: "Successfully subscribed to newsletter!"
+    };
+  } catch (error) {
+    console.error("Newsletter subscription error:", error);
+    return {
+      success: false,
+      message: "Failed to subscribe. Please try again later."
+    };
+  }
+};
+var unsubscribe = async (email) => {
+  try {
+    const existing = await prisma.newsletter.findUnique({
+      where: { email }
+    });
+    if (!existing) {
+      return {
+        success: false,
+        message: "Email not found in our newsletter list."
+      };
+    }
+    await prisma.newsletter.update({
+      where: { email },
+      data: {
+        isSubscribed: false,
+        unsubscribedAt: /* @__PURE__ */ new Date()
+      }
+    });
+    return {
+      success: true,
+      message: "Successfully unsubscribed from newsletter."
+    };
+  } catch (error) {
+    console.error("Newsletter unsubscribe error:", error);
+    return {
+      success: false,
+      message: "Failed to unsubscribe. Please try again later."
+    };
+  }
+};
+var getAllSubscribers = async (params) => {
+  try {
+    const { page, limit, search } = params;
+    const skip = (page - 1) * limit;
+    const where = { isSubscribed: true };
+    if (search) {
+      where.email = { contains: search, mode: "insensitive" };
+    }
+    const subscribers = await prisma.newsletter.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy: { subscribedAt: "desc" }
+    });
+    const totalItems = await prisma.newsletter.count({ where });
+    return {
+      success: true,
+      data: {
+        subscribers,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems,
+          itemsPerPage: limit
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Get subscribers error:", error);
+    return {
+      success: false,
+      message: "Failed to fetch subscribers"
+    };
+  }
+};
+var exportSubscribersCSV = async () => {
+  try {
+    const subscribers = await prisma.newsletter.findMany({
+      where: { isSubscribed: true },
+      orderBy: { subscribedAt: "desc" }
+    });
+    const csvRows = [
+      ["Email", "Subscribed At"],
+      ...subscribers.map((sub) => [sub.email, sub.subscribedAt.toISOString()])
+    ];
+    const csvContent = csvRows.map((row) => row.join(",")).join("\n");
+    return {
+      success: true,
+      data: csvContent
+    };
+  } catch (error) {
+    console.error("Export subscribers error:", error);
+    return {
+      success: false,
+      message: "Failed to export subscribers"
+    };
+  }
+};
+var newsletterService = {
+  subscribe,
+  unsubscribe,
+  getAllSubscribers,
+  exportSubscribersCSV
+};
+
+// src/modules/newsletter/newsletter.controller.ts
+var subscribe2 = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: "Email is required"
+      });
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email address"
+      });
+    }
+    const result = await newsletterService.subscribe(email);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+var newsletterController = {
+  subscribe: subscribe2
+};
+
+// src/modules/newsletter/newsletter.route.ts
+var router7 = express7.Router();
+router7.post("/subscribe", newsletterController.subscribe);
+var newsletterRouter = router7;
+
 // src/app.ts
-var app = express6();
+var app = express8();
 var allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5000",
@@ -2930,12 +3208,14 @@ app.use(
     exposedHeaders: ["Set-Cookie"]
   })
 );
-app.use(express6.json());
+app.use(express8.json());
 app.all("/api/auth/*splat", toNodeHandler(auth));
 app.use("/api/v1/categories", categoryRouter);
 app.use("/api/v1/ideas", ideasRouter);
 app.use("/api/v1/member", memberRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/stats", statsRouter);
+app.use("/api/v1/newsletter", newsletterRouter);
 app.use("/api/v1/upload", uploadRouter);
 app.get("/", (req, res) => {
   res.send("Hello, World!");
