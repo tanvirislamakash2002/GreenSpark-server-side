@@ -718,155 +718,10 @@ var getRecentIdeas = async (userId, limit) => {
     return { success: false, message: "Failed to fetch recent ideas" };
   }
 };
-var getMemberIdeas = async (userId, params) => {
-  try {
-    const { page, limit, search, status, sortBy } = params;
-    const skip = (page - 1) * limit;
-    const where = {
-      authorId: userId
-    };
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } }
-      ];
-    }
-    if (status && status !== "all") {
-      where.status = status;
-    }
-    let orderBy = {};
-    switch (sortBy) {
-      case "oldest":
-        orderBy = { createdAt: "asc" };
-        break;
-      case "title_asc":
-        orderBy = { title: "asc" };
-        break;
-      case "title_desc":
-        orderBy = { title: "desc" };
-        break;
-      case "votes":
-        orderBy = { voteScore: "desc" };
-        break;
-      default:
-        orderBy = { createdAt: "desc" };
-    }
-    const ideas = await prisma.idea.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy,
-      include: {
-        categories: {
-          include: {
-            category: true
-          }
-        }
-      }
-    });
-    const totalItems = await prisma.idea.count({ where });
-    const stats = await prisma.$transaction([
-      prisma.idea.count({ where: { authorId: userId } }),
-      prisma.idea.count({ where: { authorId: userId, status: "DRAFT" } }),
-      prisma.idea.count({ where: { authorId: userId, status: "PENDING" } }),
-      prisma.idea.count({ where: { authorId: userId, status: "APPROVED" } }),
-      prisma.idea.count({ where: { authorId: userId, status: "REJECTED" } })
-    ]);
-    const ideasWithComments = await Promise.all(
-      ideas.map(async (idea) => {
-        const commentCount = await prisma.comment.count({
-          where: { ideaId: idea.id, isDeleted: false }
-        });
-        return {
-          id: idea.id,
-          title: idea.title,
-          problemStatement: idea.problemStatement,
-          solution: idea.solution,
-          description: idea.description,
-          imageUrl: idea.imageUrl,
-          status: idea.status,
-          isPaid: idea.isPaid,
-          price: idea.price,
-          feedback: idea.feedback,
-          voteScore: idea.voteScore,
-          viewCount: idea.viewCount,
-          commentCount,
-          category: idea.categories[0]?.category || { id: "", name: "Uncategorized" },
-          createdAt: idea.createdAt,
-          updatedAt: idea.updatedAt
-        };
-      })
-    );
-    return {
-      success: true,
-      data: {
-        ideas: ideasWithComments,
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalItems / limit),
-          totalItems,
-          itemsPerPage: limit
-        },
-        stats: {
-          total: stats[0],
-          draft: stats[1],
-          pending: stats[2],
-          approved: stats[3],
-          rejected: stats[4]
-        }
-      }
-    };
-  } catch (error) {
-    console.error("Get member ideas error:", error);
-    return { success: false, message: "Failed to fetch ideas" };
-  }
-};
-var deleteIdea = async (userId, ideaId) => {
-  try {
-    const idea = await prisma.idea.findFirst({
-      where: { id: ideaId, authorId: userId }
-    });
-    if (!idea) {
-      return { success: false, message: "Idea not found" };
-    }
-    if (idea.status !== "DRAFT" && idea.status !== "REJECTED") {
-      return { success: false, message: "Only draft or rejected ideas can be deleted" };
-    }
-    await prisma.idea.delete({ where: { id: ideaId } });
-    return { success: true, message: "Idea deleted successfully" };
-  } catch (error) {
-    console.error("Delete idea error:", error);
-    return { success: false, message: "Failed to delete idea" };
-  }
-};
-var submitIdea = async (userId, ideaId) => {
-  try {
-    const idea = await prisma.idea.findFirst({
-      where: { id: ideaId, authorId: userId }
-    });
-    if (!idea) {
-      return { success: false, message: "Idea not found" };
-    }
-    if (idea.status !== "DRAFT") {
-      return { success: false, message: "Only draft ideas can be submitted for review" };
-    }
-    await prisma.idea.update({
-      where: { id: ideaId },
-      data: { status: "PENDING" }
-    });
-    return { success: true, message: "Idea submitted for review successfully" };
-  } catch (error) {
-    console.error("Submit idea error:", error);
-    return { success: false, message: "Failed to submit idea" };
-  }
-};
 var memberService = {
   getDashboardData,
   getStats,
-  getRecentIdeas,
-  getMemberIdeas,
-  deleteIdea,
-  submitIdea
+  getRecentIdeas
 };
 
 // src/modules/dashboard/member/member.controller.ts
@@ -916,65 +771,10 @@ var getRecentIdeas2 = async (req, res, next) => {
     next(error);
   }
 };
-var getMemberIdeas2 = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const search = req.query.search;
-    const status = req.query.status;
-    const sortBy = req.query.sortBy;
-    const result = await memberService.getMemberIdeas(userId, {
-      page,
-      limit,
-      search,
-      status,
-      sortBy
-    });
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      data: result.data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var deleteIdea2 = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const { ideaId } = req.params;
-    const result = await memberService.deleteIdea(userId, ideaId);
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json(result);
-  } catch (error) {
-    next(error);
-  }
-};
-var submitIdea2 = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const { ideaId } = req.params;
-    const result = await memberService.submitIdea(userId, ideaId);
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json(result);
-  } catch (error) {
-    next(error);
-  }
-};
 var memberController = {
   getDashboard,
   getStats: getStats2,
-  getRecentIdeas: getRecentIdeas2,
-  getMemberIdeas: getMemberIdeas2,
-  deleteIdea: deleteIdea2,
-  submitIdea: submitIdea2
+  getRecentIdeas: getRecentIdeas2
 };
 
 // src/modules/dashboard/member/member.route.ts
@@ -2013,7 +1813,7 @@ var categoryRouter = router4;
 // src/modules/ideas/ideas.route.ts
 import express5 from "express";
 
-// src/modules/ideas/ideas.service.ts
+// src/modules/ideas/services/public-ideas.service.ts
 var getIdeas = async (params) => {
   try {
     const { page, limit, search, category, status, sortBy } = params;
@@ -2145,7 +1945,6 @@ var getFeaturedIdeas = async (limit) => {
         name: c.category.name,
         slug: c.category.slug
       })) || [],
-      // Fallback to empty array
       createdAt: idea.createdAt
     }));
     return { success: true, data: transformedIdeas };
@@ -2336,6 +2135,222 @@ var getIdeaBySlug = async (slug) => {
     return { success: false, message: "Failed to fetch idea" };
   }
 };
+var publicIdeasService = {
+  getIdeas,
+  getFeaturedIdeas,
+  getTopVotedIdeas,
+  getRecentIdeas: getRecentIdeas3,
+  getIdeaById,
+  getIdeaBySlug
+};
+
+// src/modules/ideas/controllers/public-ideas.controller.ts
+var getIdeas2 = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const search = req.query.search;
+    const category = req.query.category;
+    const status = req.query.status;
+    const sortBy = req.query.sortBy || "recent";
+    const result = await publicIdeasService.getIdeas({
+      page,
+      limit,
+      search,
+      category,
+      status,
+      sortBy
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getFeaturedIdeas2 = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 3;
+    const result = await publicIdeasService.getFeaturedIdeas(limit);
+  } catch (error) {
+    next(error);
+  }
+};
+var getTopVotedIdeas2 = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 3;
+    const result = await publicIdeasService.getTopVotedIdeas(limit);
+  } catch (error) {
+    next(error);
+  }
+};
+var getRecentIdeas4 = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 6;
+    const result = await publicIdeasService.getRecentIdeas(limit);
+  } catch (error) {
+    next(error);
+  }
+};
+var getIdeaById2 = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid idea ID"
+      });
+    }
+    const result = await publicIdeasService.getIdeaById(id);
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getIdeaBySlug2 = async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    if (!slug || typeof slug !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid idea slug"
+      });
+    }
+    const result = await publicIdeasService.getIdeaBySlug(slug);
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var publicIdeasController = {
+  getIdeas: getIdeas2,
+  getFeaturedIdeas: getFeaturedIdeas2,
+  getTopVotedIdeas: getTopVotedIdeas2,
+  getRecentIdeas: getRecentIdeas4,
+  getIdeaById: getIdeaById2,
+  getIdeaBySlug: getIdeaBySlug2
+};
+
+// src/modules/ideas/services/member-ideas.service.ts
+var getMemberIdeas = async (userId, params) => {
+  try {
+    const { page, limit, search, status, sortBy } = params;
+    const skip = (page - 1) * limit;
+    const where = {
+      authorId: userId
+    };
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } }
+      ];
+    }
+    if (status && status !== "all") {
+      where.status = status;
+    }
+    let orderBy = {};
+    switch (sortBy) {
+      case "oldest":
+        orderBy = { createdAt: "asc" };
+        break;
+      case "title_asc":
+        orderBy = { title: "asc" };
+        break;
+      case "title_desc":
+        orderBy = { title: "desc" };
+        break;
+      case "votes":
+        orderBy = { voteScore: "desc" };
+        break;
+      default:
+        orderBy = { createdAt: "desc" };
+    }
+    const ideas = await prisma.idea.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        categories: {
+          include: {
+            category: true
+          }
+        }
+      }
+    });
+    const totalItems = await prisma.idea.count({ where });
+    const stats = await prisma.$transaction([
+      prisma.idea.count({ where: { authorId: userId } }),
+      prisma.idea.count({ where: { authorId: userId, status: "DRAFT" } }),
+      prisma.idea.count({ where: { authorId: userId, status: "PENDING" } }),
+      prisma.idea.count({ where: { authorId: userId, status: "APPROVED" } }),
+      prisma.idea.count({ where: { authorId: userId, status: "REJECTED" } })
+    ]);
+    const ideasWithComments = await Promise.all(
+      ideas.map(async (idea) => {
+        const commentCount = await prisma.comment.count({
+          where: { ideaId: idea.id, isDeleted: false }
+        });
+        return {
+          id: idea.id,
+          title: idea.title,
+          problemStatement: idea.problemStatement,
+          solution: idea.solution,
+          description: idea.description,
+          imageUrl: idea.imageUrl,
+          status: idea.status,
+          isPaid: idea.isPaid,
+          price: idea.price,
+          feedback: idea.feedback,
+          voteScore: idea.voteScore,
+          viewCount: idea.viewCount,
+          commentCount,
+          category: idea.categories[0]?.category || { id: "", name: "Uncategorized" },
+          createdAt: idea.createdAt,
+          updatedAt: idea.updatedAt
+        };
+      })
+    );
+    return {
+      success: true,
+      data: {
+        ideas: ideasWithComments,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems,
+          itemsPerPage: limit
+        },
+        stats: {
+          total: stats[0],
+          draft: stats[1],
+          pending: stats[2],
+          approved: stats[3],
+          rejected: stats[4]
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Get member ideas error:", error);
+    return { success: false, message: "Failed to fetch ideas" };
+  }
+};
 var createIdea = async (userId, data) => {
   try {
     const category = await prisma.category.findUnique({
@@ -2351,7 +2366,7 @@ var createIdea = async (userId, data) => {
         solution: data.solution,
         description: data.description,
         imageUrl: data.imageUrl || null,
-        status: "DRAFT",
+        status: data.status || "DRAFT",
         isPaid: data.isPaid,
         price: data.price,
         authorId: userId,
@@ -2487,7 +2502,7 @@ var updateIdea = async (id, userId, data) => {
     return { success: false, message: "Failed to update idea" };
   }
 };
-var deleteIdea3 = async (id, userId) => {
+var deleteIdea = async (id, userId) => {
   try {
     const idea = await prisma.idea.findFirst({
       where: { id, authorId: userId }
@@ -2505,7 +2520,7 @@ var deleteIdea3 = async (id, userId) => {
     return { success: false, message: "Failed to delete idea" };
   }
 };
-var submitIdea3 = async (id, userId) => {
+var submitIdea = async (id, userId) => {
   try {
     const idea = await prisma.idea.findFirst({
       where: { id, authorId: userId }
@@ -2524,6 +2539,163 @@ var submitIdea3 = async (id, userId) => {
   } catch (error) {
     console.error("Submit idea error:", error);
     return { success: false, message: "Failed to submit idea" };
+  }
+};
+var memberIdeasService = {
+  getMemberIdeas,
+  createIdea,
+  updateIdea,
+  deleteIdea,
+  submitIdea
+};
+
+// src/modules/ideas/services/admin-ideas.service.ts
+var getAdminIdeas = async (params) => {
+  try {
+    const { page, limit, search, category, status, sortBy } = params;
+    const skip = (page - 1) * limit;
+    const where = {};
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } },
+        { problemStatement: { contains: search, mode: "insensitive" } },
+        { author: { name: { contains: search, mode: "insensitive" } } }
+      ];
+    }
+    if (category) {
+      where.categories = {
+        some: {
+          category: {
+            slug: category
+          }
+        }
+      };
+    }
+    if (status && status !== "all") {
+      where.status = status;
+    }
+    let orderBy = {};
+    switch (sortBy) {
+      case "oldest":
+        orderBy = { createdAt: "asc" };
+        break;
+      case "votes":
+        orderBy = { voteScore: "desc" };
+        break;
+      case "views":
+        orderBy = { viewCount: "desc" };
+        break;
+      default:
+        orderBy = { createdAt: "desc" };
+    }
+    const ideas = await prisma.idea.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true
+          }
+        },
+        categories: {
+          include: {
+            category: true
+          }
+        }
+      }
+    });
+    const totalItems = await prisma.idea.count({ where });
+    const stats = await prisma.$transaction([
+      prisma.idea.count(),
+      prisma.idea.count({ where: { status: "DRAFT" } }),
+      prisma.idea.count({ where: { status: "PENDING" } }),
+      prisma.idea.count({ where: { status: "APPROVED" } }),
+      prisma.idea.count({ where: { status: "REJECTED" } })
+    ]);
+    const transformedIdeas = ideas.map((idea) => ({
+      id: idea.id,
+      title: idea.title,
+      problemStatement: idea.problemStatement,
+      solution: idea.solution,
+      description: idea.description,
+      imageUrl: idea.imageUrl,
+      status: idea.status,
+      isPaid: idea.isPaid,
+      price: idea.price,
+      voteScore: idea.voteScore,
+      viewCount: idea.viewCount,
+      commentCount: idea.commentCount,
+      author: idea.author,
+      categories: idea.categories.map((c) => ({
+        id: c.category.id,
+        name: c.category.name,
+        slug: c.category.slug
+      })),
+      createdAt: idea.createdAt,
+      updatedAt: idea.updatedAt
+    }));
+    return {
+      success: true,
+      data: {
+        ideas: transformedIdeas,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems,
+          itemsPerPage: limit
+        },
+        stats: {
+          total: stats[0],
+          draft: stats[1],
+          pending: stats[2],
+          approved: stats[3],
+          rejected: stats[4]
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Get admin ideas error:", error);
+    return { success: false, message: "Failed to fetch ideas" };
+  }
+};
+var adminDeleteIdea = async (ideaId, adminId, reason) => {
+  try {
+    const idea = await prisma.idea.findUnique({
+      where: { id: ideaId },
+      include: {
+        author: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+    if (!idea) {
+      return { success: false, message: "Idea not found" };
+    }
+    await prisma.idea.delete({
+      where: { id: ideaId }
+    });
+    return {
+      success: true,
+      message: `Idea "${idea.title}" has been deleted successfully`,
+      data: {
+        ideaId: idea.id,
+        ideaTitle: idea.title,
+        authorName: idea.author.name
+      }
+    };
+  } catch (error) {
+    console.error("Admin delete idea error:", error);
+    return { success: false, message: "Failed to delete idea" };
   }
 };
 var approveIdea = async (id) => {
@@ -2590,36 +2762,27 @@ var featureIdea = async (id) => {
     return { success: false, message: "Failed to feature idea" };
   }
 };
-var ideasService = {
-  getIdeas,
-  getFeaturedIdeas,
-  getTopVotedIdeas,
-  getRecentIdeas: getRecentIdeas3,
-  getIdeaById,
-  getIdeaBySlug,
-  createIdea,
-  updateIdea,
-  deleteIdea: deleteIdea3,
-  submitIdea: submitIdea3,
+var adminIdeasService = {
+  getAdminIdeas,
+  adminDeleteIdea,
   approveIdea,
   rejectIdea,
   featureIdea
 };
 
-// src/modules/ideas/ideas.controller.ts
-var getIdeas2 = async (req, res, next) => {
+// src/modules/ideas/controllers/member-ideas.controller.ts
+var getMemberIdeas2 = async (req, res, next) => {
   try {
+    const userId = req.user.id;
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
+    const limit = parseInt(req.query.limit) || 10;
     const search = req.query.search;
-    const category = req.query.category;
     const status = req.query.status;
-    const sortBy = req.query.sortBy || "recent";
-    const result = await ideasService.getIdeas({
+    const sortBy = req.query.sortBy;
+    const result = await memberIdeasService.getMemberIdeas(userId, {
       page,
       limit,
       search,
-      category,
       status,
       sortBy
     });
@@ -2634,97 +2797,10 @@ var getIdeas2 = async (req, res, next) => {
     next(error);
   }
 };
-var getFeaturedIdeas2 = async (req, res, next) => {
-  try {
-    const limit = parseInt(req.query.limit) || 3;
-    const result = await ideasService.getFeaturedIdeas(limit);
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      data: result.data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getTopVotedIdeas2 = async (req, res, next) => {
-  try {
-    const limit = parseInt(req.query.limit) || 3;
-    const result = await ideasService.getTopVotedIdeas(limit);
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      data: result.data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getRecentIdeas4 = async (req, res, next) => {
-  try {
-    const limit = parseInt(req.query.limit) || 6;
-    const result = await ideasService.getRecentIdeas(limit);
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      data: result.data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getIdeaById2 = async (req, res, next) => {
-  try {
-    const { id } = req.params;
-    if (!id || typeof id !== "string") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid idea ID"
-      });
-    }
-    const result = await ideasService.getIdeaById(id);
-    if (!result.success) {
-      return res.status(404).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      data: result.data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var getIdeaBySlug2 = async (req, res, next) => {
-  try {
-    const { slug } = req.params;
-    if (!slug || typeof slug !== "string") {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid idea slug"
-      });
-    }
-    const result = await ideasService.getIdeaBySlug(slug);
-    if (!result.success) {
-      return res.status(404).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      data: result.data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 var createIdea2 = async (req, res, next) => {
   try {
     const userId = req.user.id;
-    const { title, problemStatement, solution, description, imageUrl, isPaid, price, categoryId } = req.body;
+    const { title, problemStatement, solution, description, imageUrl, isPaid, price, categoryId, status } = req.body;
     if (!title || title.length < 5) {
       return res.status(400).json({
         success: false,
@@ -2761,7 +2837,7 @@ var createIdea2 = async (req, res, next) => {
         message: "Valid price is required for paid ideas"
       });
     }
-    const result = await ideasService.createIdea(userId, {
+    const result = await memberIdeasService.createIdea(userId, {
       title,
       problemStatement,
       solution,
@@ -2769,7 +2845,8 @@ var createIdea2 = async (req, res, next) => {
       imageUrl,
       isPaid: isPaid || false,
       price: isPaid ? price : null,
-      categoryId
+      categoryId,
+      status
     });
     if (!result.success) {
       return res.status(400).json(result);
@@ -2794,7 +2871,7 @@ var updateIdea2 = async (req, res, next) => {
         message: "Invalid idea ID"
       });
     }
-    const result = await ideasService.updateIdea(id, userId, {
+    const result = await memberIdeasService.updateIdea(id, userId, {
       title,
       problemStatement,
       solution,
@@ -2816,7 +2893,7 @@ var updateIdea2 = async (req, res, next) => {
     next(error);
   }
 };
-var deleteIdea4 = async (req, res, next) => {
+var deleteIdea2 = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
@@ -2826,7 +2903,7 @@ var deleteIdea4 = async (req, res, next) => {
         message: "Invalid idea ID"
       });
     }
-    const result = await ideasService.deleteIdea(id, userId);
+    const result = await memberIdeasService.deleteIdea(id, userId);
     if (!result.success) {
       return res.status(400).json(result);
     }
@@ -2835,7 +2912,7 @@ var deleteIdea4 = async (req, res, next) => {
     next(error);
   }
 };
-var submitIdea4 = async (req, res, next) => {
+var submitIdea2 = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
@@ -2845,7 +2922,63 @@ var submitIdea4 = async (req, res, next) => {
         message: "Invalid idea ID"
       });
     }
-    const result = await ideasService.submitIdea(id, userId);
+    const result = await memberIdeasService.submitIdea(id, userId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+var memberIdeasController = {
+  getMemberIdeas: getMemberIdeas2,
+  createIdea: createIdea2,
+  updateIdea: updateIdea2,
+  deleteIdea: deleteIdea2,
+  submitIdea: submitIdea2
+};
+
+// src/modules/ideas/controllers/admin-ideas.controller.ts
+var getAdminIdeas2 = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search;
+    const category = req.query.category;
+    const status = req.query.status;
+    const sortBy = req.query.sortBy || "newest";
+    const result = await adminIdeasService.getAdminIdeas({
+      page,
+      limit,
+      search,
+      category,
+      status,
+      sortBy
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var adminDeleteIdea2 = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const adminId = req.user.id;
+    const { reason } = req.body;
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid idea ID"
+      });
+    }
+    const result = await adminIdeasService.adminDeleteIdea(id, adminId, reason);
     if (!result.success) {
       return res.status(400).json(result);
     }
@@ -2863,7 +2996,7 @@ var approveIdea2 = async (req, res, next) => {
         message: "Invalid idea ID"
       });
     }
-    const result = await ideasService.approveIdea(id);
+    const result = await adminIdeasService.approveIdea(id);
     if (!result.success) {
       return res.status(400).json(result);
     }
@@ -2888,7 +3021,7 @@ var rejectIdea2 = async (req, res, next) => {
         message: "Feedback is required for rejection"
       });
     }
-    const result = await ideasService.rejectIdea(id, feedback);
+    const result = await adminIdeasService.rejectIdea(id, feedback);
     if (!result.success) {
       return res.status(400).json(result);
     }
@@ -2906,7 +3039,7 @@ var featureIdea2 = async (req, res, next) => {
         message: "Invalid idea ID"
       });
     }
-    const result = await ideasService.featureIdea(id);
+    const result = await adminIdeasService.featureIdea(id);
     if (!result.success) {
       return res.status(400).json(result);
     }
@@ -2915,17 +3048,9 @@ var featureIdea2 = async (req, res, next) => {
     next(error);
   }
 };
-var ideasController = {
-  getIdeas: getIdeas2,
-  getFeaturedIdeas: getFeaturedIdeas2,
-  getTopVotedIdeas: getTopVotedIdeas2,
-  getRecentIdeas: getRecentIdeas4,
-  getIdeaById: getIdeaById2,
-  getIdeaBySlug: getIdeaBySlug2,
-  createIdea: createIdea2,
-  updateIdea: updateIdea2,
-  deleteIdea: deleteIdea4,
-  submitIdea: submitIdea4,
+var adminIdeasController = {
+  getAdminIdeas: getAdminIdeas2,
+  adminDeleteIdea: adminDeleteIdea2,
   approveIdea: approveIdea2,
   rejectIdea: rejectIdea2,
   featureIdea: featureIdea2
@@ -2933,19 +3058,21 @@ var ideasController = {
 
 // src/modules/ideas/ideas.route.ts
 var router5 = express5.Router();
-router5.get("/", ideasController.getIdeas);
-router5.get("/featured", ideasController.getFeaturedIdeas);
-router5.get("/top-voted", ideasController.getTopVotedIdeas);
-router5.get("/recent", ideasController.getRecentIdeas);
-router5.get("/:id", ideasController.getIdeaById);
-router5.get("/slug/:slug", ideasController.getIdeaBySlug);
-router5.post("/", auth_default(Role.MEMBER), ideasController.createIdea);
-router5.patch("/:id", auth_default(Role.MEMBER), ideasController.updateIdea);
-router5.delete("/:id", auth_default(Role.MEMBER), ideasController.deleteIdea);
-router5.patch("/:id/submit", auth_default(Role.MEMBER), ideasController.submitIdea);
-router5.patch("/:id/approve", auth_default(Role.ADMIN), ideasController.approveIdea);
-router5.patch("/:id/reject", auth_default(Role.ADMIN), ideasController.rejectIdea);
-router5.patch("/:id/feature", auth_default(Role.ADMIN), ideasController.featureIdea);
+router5.get("/", publicIdeasController.getIdeas);
+router5.get("/featured", publicIdeasController.getFeaturedIdeas);
+router5.get("/top-voted", publicIdeasController.getTopVotedIdeas);
+router5.get("/recent", publicIdeasController.getRecentIdeas);
+router5.get("/:id", publicIdeasController.getIdeaById);
+router5.get("/slug/:slug", publicIdeasController.getIdeaBySlug);
+router5.post("/", auth_default(Role.MEMBER), memberIdeasController.createIdea);
+router5.patch("/member/:id", auth_default(Role.MEMBER), memberIdeasController.updateIdea);
+router5.delete("/:id", auth_default(Role.MEMBER), memberIdeasController.deleteIdea);
+router5.patch("/:id/submit", auth_default(Role.MEMBER), memberIdeasController.submitIdea);
+router5.get("/admin/ideas", auth_default(Role.ADMIN), adminIdeasController.getAdminIdeas);
+router5.delete("/admin/ideas/:id", auth_default(Role.ADMIN), adminIdeasController.adminDeleteIdea);
+router5.patch("/:id/approve", auth_default(Role.ADMIN), adminIdeasController.approveIdea);
+router5.patch("/:id/reject", auth_default(Role.ADMIN), adminIdeasController.rejectIdea);
+router5.patch("/:id/feature", auth_default(Role.ADMIN), adminIdeasController.featureIdea);
 var ideasRouter = router5;
 
 // src/modules/stats/stats.route.ts

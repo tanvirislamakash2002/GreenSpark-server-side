@@ -11,8 +11,5 @@ router.use(auth(Role.MEMBER));
 router.get("/dashboard", memberController.getDashboard);
 router.get("/stats", memberController.getStats);
 router.get("/ideas/recent", memberController.getRecentIdeas);
-router.get("/ideas", memberController.getMemberIdeas);
-router.delete("/ideas/:ideaId", memberController.deleteIdea);
-router.patch("/ideas/:ideaId/submit", memberController.submitIdea);
 
 export const memberRouter: Router = router;

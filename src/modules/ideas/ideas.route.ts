@@ -1,27 +1,31 @@
 import express, { Router } from "express";
 import auth from "../../middlewares/auth";
 import { Role } from "../../generated/prisma/enums";
-import { ideasController } from "./ideas.controller";
+import { adminIdeasController, memberIdeasController, publicIdeasController } from "./controllers";
 
 const router = express.Router();
 
 // ============ Public Routes (No Authentication Required) ============
-router.get("/", ideasController.getIdeas);
-router.get("/featured", ideasController.getFeaturedIdeas);
-router.get("/top-voted", ideasController.getTopVotedIdeas);
-router.get("/recent", ideasController.getRecentIdeas);
-router.get("/:id", ideasController.getIdeaById);
-router.get("/slug/:slug", ideasController.getIdeaBySlug);
+router.get("/", publicIdeasController.getIdeas);
+router.get("/featured", publicIdeasController.getFeaturedIdeas);
+router.get("/top-voted", publicIdeasController.getTopVotedIdeas);
+router.get("/recent", publicIdeasController.getRecentIdeas);
+router.get("/:id", publicIdeasController.getIdeaById);
+router.get("/slug/:slug", publicIdeasController.getIdeaBySlug);
 
 // ============ Member Only Routes ============
-router.post("/", auth(Role.MEMBER), ideasController.createIdea);
-router.patch("/member/:id", auth(Role.MEMBER), ideasController.updateIdea);
-router.delete("/:id", auth(Role.MEMBER), ideasController.deleteIdea);
-router.patch("/:id/submit", auth(Role.MEMBER), ideasController.submitIdea);
+router.get("/member/ideas", auth(Role.MEMBER), memberIdeasController.getMemberIdeas);
+router.post("/", auth(Role.MEMBER), memberIdeasController.createIdea);
+router.patch("/member/:id", auth(Role.MEMBER), memberIdeasController.updateIdea);
+router.delete("/:id", auth(Role.MEMBER), memberIdeasController.deleteIdea);
+router.patch("/:id/submit", auth(Role.MEMBER), memberIdeasController.submitIdea);
+
 
 // ============ Admin Only Routes ============
-router.patch("/:id/approve", auth(Role.ADMIN), ideasController.approveIdea);
-router.patch("/:id/reject", auth(Role.ADMIN), ideasController.rejectIdea);
-router.patch("/:id/feature", auth(Role.ADMIN), ideasController.featureIdea);
+router.get("/admin/ideas", auth(Role.ADMIN), adminIdeasController.getAdminIdeas);
+router.delete("/admin/:id", auth(Role.ADMIN), adminIdeasController.adminDeleteIdea);
+router.patch("/:id/approve", auth(Role.ADMIN), adminIdeasController.approveIdea);
+router.patch("/:id/reject", auth(Role.ADMIN), adminIdeasController.rejectIdea);
+router.patch("/:id/feature", auth(Role.ADMIN), adminIdeasController.featureIdea);
 
 export const ideasRouter: Router = router;
