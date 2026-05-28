@@ -10,6 +10,5 @@ router.use(auth(Role.MEMBER));
 
 router.get("/dashboard", memberController.getDashboard);
 router.get("/stats", memberController.getStats);
-router.get("/ideas/recent", memberController.getRecentIdeas);
 
 export const memberRouter: Router = router;

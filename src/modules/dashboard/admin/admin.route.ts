@@ -10,7 +10,6 @@ router.use(auth(Role.ADMIN));
 
 router.get("/dashboard", adminController.getDashboard);
 router.get("/stats", adminController.getStats);
-router.get("/ideas/pending", adminController.getPendingIdeas);
 router.get("/activity/recent", adminController.getRecentActivity);
 
 export const adminRouter: Router = router;

@@ -130,6 +130,30 @@ const getMemberIdeas = async (
     }
 };
 
+const getRecentIdeas = async (userId: string, limit: number) => {
+    try {
+        const ideas = await prisma.idea.findMany({
+            where: { authorId: userId },
+            orderBy: { createdAt: "desc" },
+            take: limit,
+            select: {
+                id: true,
+                title: true,
+                status: true,
+                voteScore: true,
+                viewCount: true,
+                commentCount: true,
+                createdAt: true,
+            },
+        });
+
+        return { success: true, data: ideas };
+    } catch (error) {
+        console.error("Get recent ideas error:", error);
+        return { success: false, message: "Failed to fetch recent ideas" };
+    }
+};
+
 const createIdea = async (
     userId: string,
     data: {
@@ -380,6 +404,7 @@ const submitIdea = async (id: string, userId: string) => {
 
 export const memberIdeasService = {
     getMemberIdeas,
+    getRecentIdeas,
     createIdea,
     updateIdea,
     deleteIdea,

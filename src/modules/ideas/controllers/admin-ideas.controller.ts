@@ -32,6 +32,25 @@ const getAdminIdeas = async (req: Request, res: Response, next: NextFunction) =>
     }
 };
 
+const getPendingIdeas = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const limit = parseInt(req.query.limit as string) || 10;
+        const result = await adminIdeasService.getPendingIdeas(limit);
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: result.data,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+
 const adminDeleteIdea = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
@@ -136,6 +155,7 @@ const featureIdea = async (req: Request, res: Response, next: NextFunction) => {
 
 export const adminIdeasController = {
     getAdminIdeas,
+    getPendingIdeas,
     adminDeleteIdea,
     approveIdea,
     rejectIdea,

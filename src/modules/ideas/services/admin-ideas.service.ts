@@ -137,6 +137,42 @@ const getAdminIdeas = async (params: {
     }
 };
 
+const getPendingIdeas = async (limit: number) => {
+    try {
+        const ideas = await prisma.idea.findMany({
+            where: { status: "PENDING" },
+            orderBy: { createdAt: "desc" },
+            take: limit,
+            include: {
+                author: {
+                    select: { id: true, name: true, email: true, image: true },
+                },
+                categories: {
+                    include: {
+                        category: { select: { id: true, name: true } },
+                    },
+                },
+            },
+        });
+
+        return {
+            success: true,
+            data: ideas.map(idea => ({
+                id: idea.id,
+                title: idea.title,
+                problemStatement: idea.problemStatement,
+                author: idea.author,
+                category: idea.categories[0]?.category || { id: "", name: "Uncategorized" },
+                createdAt: idea.createdAt,
+                voteScore: idea.voteScore,
+            })),
+        };
+    } catch (error) {
+        console.error("Get pending ideas error:", error);
+        return { success: false, message: "Failed to fetch pending ideas" };
+    }
+};
+
 const adminDeleteIdea = async (ideaId: string, adminId: string, reason?: string) => {
     try {
         // Find the idea
@@ -263,6 +299,7 @@ const featureIdea = async (id: string) => {
 
 export const adminIdeasService = {
     getAdminIdeas,
+    getPendingIdeas,
     adminDeleteIdea,
     approveIdea,
     rejectIdea,
