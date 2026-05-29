@@ -71,15 +71,52 @@ const removeBookmark = async (userId: string, ideaId: string) => {
     }
 };
 
-const getUserBookmarks = async (userId: string, page: number, limit: number) => {
+const getUserBookmarks = async (
+    userId: string,
+    page: number,
+    limit: number,
+    search?: string,
+    category?: string,
+    sortBy?: string
+) => {
     try {
         const skip = (page - 1) * limit;
 
+        // Build where clause
+        const where: any = { userId };
+
+        if (search) {
+            where.idea = {
+                OR: [
+                    { title: { contains: search, mode: 'insensitive' } },
+                    { description: { contains: search, mode: 'insensitive' } },
+                ],
+            };
+        }
+
+        if (category && category !== 'all') {
+            where.idea = {
+                ...where.idea,
+                categories: {
+                    some: {
+                        category: { slug: category },
+                    },
+                },
+            };
+        }
+
+        // Build order by
+        let orderBy: any = { createdAt: 'desc' };
+        if (sortBy === 'oldest') orderBy = { createdAt: 'asc' };
+        if (sortBy === 'title') orderBy = { idea: { title: 'asc' } };
+        if (sortBy === 'votes') orderBy = { idea: { voteScore: 'desc' } };
+        if (sortBy === 'views') orderBy = { idea: { viewCount: 'desc' } };
+
         const bookmarks = await prisma.bookmark.findMany({
-            where: { userId },
+            where,
             skip,
             take: limit,
-            orderBy: { createdAt: "desc" },
+            orderBy,
             include: {
                 idea: {
                     include: {
@@ -100,11 +137,16 @@ const getUserBookmarks = async (userId: string, page: number, limit: number) => 
             id: bookmark.id,
             ideaId: bookmark.idea.id,
             ideaTitle: bookmark.idea.title,
+            ideaDescription: bookmark.idea.description,
             ideaImage: bookmark.idea.imageUrl,
             ideaStatus: bookmark.idea.status,
             ideaVoteScore: bookmark.idea.voteScore,
+            ideaViewCount: bookmark.idea.viewCount,
+            ideaCommentCount: bookmark.idea.commentCount,
             authorName: bookmark.idea.author.name,
             authorImage: bookmark.idea.author.image,
+            categoryName: bookmark.idea.categories[0]?.category.name || 'Uncategorized',
+            categorySlug: bookmark.idea.categories[0]?.category.slug || 'uncategorized',
             bookmarkedAt: bookmark.createdAt,
         }));
 

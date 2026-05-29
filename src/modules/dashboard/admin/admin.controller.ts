@@ -4,15 +4,17 @@ import { adminService } from "./admin.service";
 const getDashboard = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const result = await adminService.getDashboardData();
-
+        
         if (!result.success) {
             return res.status(400).json(result);
         }
 
-        return res.status(200).json({
+        const response = {
             success: true,
             data: result.data,
-        });
+        };
+        
+        return res.status(200).json(response);
     } catch (error) {
         next(error);
     }

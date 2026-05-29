@@ -1,3 +1,4 @@
+import { convertBigIntInObject, toNumber } from "../../../helpers/bigintHelper";
 import { prisma } from "../../../lib/prisma";
 
 const getDashboardData = async () => {
@@ -101,7 +102,7 @@ const getDashboardData = async () => {
         ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
             .slice(0, 10);
 
-        //  Get top contributors using include instead of select
+        // Get top contributors
         const topContributors = await prisma.user.findMany({
             where: { role: "MEMBER" },
             take: 5,
@@ -154,28 +155,23 @@ const getDashboardData = async () => {
             where: { status: "PENDING" },
         });
 
-        // Get chart data
+        // Get chart data - convert BigInt counts
         const last30Days: string[] = Array.from({ length: 30 }, (_, i) => {
             const date = new Date();
             date.setDate(date.getDate() - i);
             const dateString = date.toISOString().split('T')[0];
-            // Ensure we return a string, never undefined
             return dateString ?? new Date().toISOString().split('T')[0] ?? 'unknown';
         }).reverse();
 
         const ideasOverTime = await Promise.all(
             last30Days.map(async (dateStr: string) => {
-                // Ensure dateStr is defined and valid
                 if (!dateStr) {
                     return { date: dateStr || 'unknown', count: 0 };
                 }
-
                 const start = new Date(dateStr);
-                // Check if date is valid
                 if (isNaN(start.getTime())) {
                     return { date: dateStr, count: 0 };
                 }
-
                 const end = new Date(dateStr);
                 end.setDate(end.getDate() + 1);
                 const count = await prisma.idea.count({
@@ -183,23 +179,19 @@ const getDashboardData = async () => {
                         createdAt: { gte: start, lt: end },
                     },
                 });
-                return { date: dateStr, count };
+                return { date: dateStr, count: toNumber(count) };  
             })
         );
 
         const usersOverTime = await Promise.all(
             last30Days.slice(-7).map(async (dateStr: string) => {
-                // Ensure dateStr is defined and valid
                 if (!dateStr) {
                     return { date: dateStr || 'unknown', count: 0 };
                 }
-
                 const start = new Date(dateStr);
-                // Check if date is valid
                 if (isNaN(start.getTime())) {
                     return { date: dateStr, count: 0 };
                 }
-
                 const end = new Date(dateStr);
                 end.setDate(end.getDate() + 1);
                 const count = await prisma.user.count({
@@ -207,7 +199,7 @@ const getDashboardData = async () => {
                         createdAt: { gte: start, lt: end },
                     },
                 });
-                return { date: dateStr, count };
+                return { date: dateStr, count: toNumber(count) };  
             })
         );
 
@@ -228,16 +220,16 @@ const getDashboardData = async () => {
             success: true,
             data: {
                 stats: {
-                    totalUsers,
-                    activeUsers,
-                    suspendedUsers,
-                    totalIdeas,
-                    pendingIdeas,
-                    approvedIdeas,
-                    rejectedIdeas,
-                    totalVotes,
-                    totalComments,
-                    totalBookmarks,
+                    totalUsers: toNumber(totalUsers),
+                    activeUsers: toNumber(activeUsers),
+                    suspendedUsers: toNumber(suspendedUsers),
+                    totalIdeas: toNumber(totalIdeas),
+                    pendingIdeas: toNumber(pendingIdeas),
+                    approvedIdeas: toNumber(approvedIdeas),
+                    rejectedIdeas: toNumber(rejectedIdeas),
+                    totalVotes: toNumber(totalVotes),
+                    totalComments: toNumber(totalComments),
+                    totalBookmarks: toNumber(totalBookmarks),
                 },
                 pendingIdeas: pendingIdeasList.map(idea => ({
                     id: idea.id,
@@ -246,19 +238,19 @@ const getDashboardData = async () => {
                     author: idea.author,
                     category: idea.categories[0]?.category || { id: "", name: "Uncategorized" },
                     createdAt: idea.createdAt,
-                    voteScore: idea.voteScore,
+                    voteScore: toNumber(idea.voteScore),
                 })),
                 recentActivity: activities,
                 topContributors: contributors,
                 recentUsers: recentUsersList,
-                reportedCommentsCount,
+                reportedCommentsCount: toNumber(reportedCommentsCount),
                 chartData: {
                     ideasOverTime,
                     usersOverTime,
-                    ideasByCategory: ideasByCategory as any[],
+                    ideasByCategory: convertBigIntInObject(ideasByCategory),
                     ideasByStatus: ideasByStatus.map(item => ({
                         status: item.status,
-                        count: item._count.status,
+                        count: toNumber(item._count.status),
                     })),
                 },
             },
@@ -298,16 +290,16 @@ const getStats = async () => {
         return {
             success: true,
             data: {
-                totalUsers,
-                activeUsers,
-                suspendedUsers,
-                totalIdeas,
-                pendingIdeas,
-                approvedIdeas,
-                rejectedIdeas,
-                totalVotes,
-                totalComments,
-                totalBookmarks,
+                totalUsers: toNumber(totalUsers),
+                activeUsers: toNumber(activeUsers),
+                suspendedUsers: toNumber(suspendedUsers),
+                totalIdeas: toNumber(totalIdeas),
+                pendingIdeas: toNumber(pendingIdeas),
+                approvedIdeas: toNumber(approvedIdeas),
+                rejectedIdeas: toNumber(rejectedIdeas),
+                totalVotes: toNumber(totalVotes),
+                totalComments: toNumber(totalComments),
+                totalBookmarks: toNumber(totalBookmarks),
             },
         };
     } catch (error) {

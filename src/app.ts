@@ -13,6 +13,7 @@ import { statsRouter } from "./modules/stats/stats.route";
 import { newsletterRouter } from "./modules/newsletter/newsletter.route";
 import { bookmarkRouter } from "./modules/bookmarks/bookmark.route";
 import { voteRouter } from "./modules/votes/vote.route";
+import { memberProfileRouter } from "./modules/profile/member/member-profile.route";
 
 const app: Application = express()
 
@@ -59,6 +60,7 @@ app.use("/api/v1/ideas", ideasRouter);
 app.use("/api/v1/votes", voteRouter);
 app.use("/api/v1/member", memberRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/members", memberProfileRouter);
 app.use("/api/v1/bookmarks", bookmarkRouter);
 app.use("/api/v1/stats", statsRouter);
 app.use("/api/v1/newsletter", newsletterRouter);
