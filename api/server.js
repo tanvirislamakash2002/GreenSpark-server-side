@@ -696,32 +696,9 @@ var getStats = async (userId) => {
     return { success: false, message: "Failed to fetch stats" };
   }
 };
-var getRecentIdeas = async (userId, limit) => {
-  try {
-    const ideas = await prisma.idea.findMany({
-      where: { authorId: userId },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      select: {
-        id: true,
-        title: true,
-        status: true,
-        voteScore: true,
-        viewCount: true,
-        commentCount: true,
-        createdAt: true
-      }
-    });
-    return { success: true, data: ideas };
-  } catch (error) {
-    console.error("Get recent ideas error:", error);
-    return { success: false, message: "Failed to fetch recent ideas" };
-  }
-};
 var memberService = {
   getDashboardData,
-  getStats,
-  getRecentIdeas
+  getStats
 };
 
 // src/modules/dashboard/member/member.controller.ts
@@ -755,26 +732,9 @@ var getStats2 = async (req, res, next) => {
     next(error);
   }
 };
-var getRecentIdeas2 = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const limit = parseInt(req.query.limit) || 5;
-    const result = await memberService.getRecentIdeas(userId, limit);
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      data: result.data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 var memberController = {
   getDashboard,
-  getStats: getStats2,
-  getRecentIdeas: getRecentIdeas2
+  getStats: getStats2
 };
 
 // src/modules/dashboard/member/member.route.ts
@@ -782,10 +742,6 @@ var router2 = express2.Router();
 router2.use(auth_default(Role.MEMBER));
 router2.get("/dashboard", memberController.getDashboard);
 router2.get("/stats", memberController.getStats);
-router2.get("/ideas/recent", memberController.getRecentIdeas);
-router2.get("/ideas", memberController.getMemberIdeas);
-router2.delete("/ideas/:ideaId", memberController.deleteIdea);
-router2.patch("/ideas/:ideaId/submit", memberController.submitIdea);
 var memberRouter = router2;
 
 // src/modules/dashboard/admin/admin.route.ts
@@ -1068,40 +1024,6 @@ var getStats3 = async () => {
     return { success: false, message: "Failed to fetch stats" };
   }
 };
-var getPendingIdeas = async (limit) => {
-  try {
-    const ideas = await prisma.idea.findMany({
-      where: { status: "PENDING" },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      include: {
-        author: {
-          select: { id: true, name: true, email: true, image: true }
-        },
-        categories: {
-          include: {
-            category: { select: { id: true, name: true } }
-          }
-        }
-      }
-    });
-    return {
-      success: true,
-      data: ideas.map((idea) => ({
-        id: idea.id,
-        title: idea.title,
-        problemStatement: idea.problemStatement,
-        author: idea.author,
-        category: idea.categories[0]?.category || { id: "", name: "Uncategorized" },
-        createdAt: idea.createdAt,
-        voteScore: idea.voteScore
-      }))
-    };
-  } catch (error) {
-    console.error("Get pending ideas error:", error);
-    return { success: false, message: "Failed to fetch pending ideas" };
-  }
-};
 var getRecentActivity = async (limit) => {
   try {
     const recentIdeas = await prisma.idea.findMany({
@@ -1158,7 +1080,6 @@ var getRecentActivity = async (limit) => {
 var adminService = {
   getDashboardData: getDashboardData2,
   getStats: getStats3,
-  getPendingIdeas,
   getRecentActivity
 };
 
@@ -1191,21 +1112,6 @@ var getStats4 = async (req, res, next) => {
     next(error);
   }
 };
-var getPendingIdeas2 = async (req, res, next) => {
-  try {
-    const limit = parseInt(req.query.limit) || 10;
-    const result = await adminService.getPendingIdeas(limit);
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      data: result.data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
 var getRecentActivity2 = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 10;
@@ -1224,7 +1130,6 @@ var getRecentActivity2 = async (req, res, next) => {
 var adminController = {
   getDashboard: getDashboard2,
   getStats: getStats4,
-  getPendingIdeas: getPendingIdeas2,
   getRecentActivity: getRecentActivity2
 };
 
@@ -1233,7 +1138,6 @@ var router3 = express3.Router();
 router3.use(auth_default(Role.ADMIN));
 router3.get("/dashboard", adminController.getDashboard);
 router3.get("/stats", adminController.getStats);
-router3.get("/ideas/pending", adminController.getPendingIdeas);
 router3.get("/activity/recent", adminController.getRecentActivity);
 var adminRouter = router3;
 
@@ -1986,7 +1890,7 @@ var getTopVotedIdeas = async (limit) => {
     return { success: false, message: "Failed to fetch top voted ideas" };
   }
 };
-var getRecentIdeas3 = async (limit) => {
+var getRecentIdeas = async (limit) => {
   try {
     const ideas = await prisma.idea.findMany({
       where: { status: "APPROVED" },
@@ -2139,7 +2043,7 @@ var publicIdeasService = {
   getIdeas,
   getFeaturedIdeas,
   getTopVotedIdeas,
-  getRecentIdeas: getRecentIdeas3,
+  getRecentIdeas,
   getIdeaById,
   getIdeaBySlug
 };
@@ -2188,7 +2092,7 @@ var getTopVotedIdeas2 = async (req, res, next) => {
     next(error);
   }
 };
-var getRecentIdeas4 = async (req, res, next) => {
+var getRecentIdeas2 = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 6;
     const result = await publicIdeasService.getRecentIdeas(limit);
@@ -2242,7 +2146,7 @@ var publicIdeasController = {
   getIdeas: getIdeas2,
   getFeaturedIdeas: getFeaturedIdeas2,
   getTopVotedIdeas: getTopVotedIdeas2,
-  getRecentIdeas: getRecentIdeas4,
+  getRecentIdeas: getRecentIdeas2,
   getIdeaById: getIdeaById2,
   getIdeaBySlug: getIdeaBySlug2
 };
@@ -2349,6 +2253,28 @@ var getMemberIdeas = async (userId, params) => {
   } catch (error) {
     console.error("Get member ideas error:", error);
     return { success: false, message: "Failed to fetch ideas" };
+  }
+};
+var getRecentIdeas3 = async (userId, limit) => {
+  try {
+    const ideas = await prisma.idea.findMany({
+      where: { authorId: userId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        voteScore: true,
+        viewCount: true,
+        commentCount: true,
+        createdAt: true
+      }
+    });
+    return { success: true, data: ideas };
+  } catch (error) {
+    console.error("Get recent ideas error:", error);
+    return { success: false, message: "Failed to fetch recent ideas" };
   }
 };
 var createIdea = async (userId, data) => {
@@ -2543,6 +2469,7 @@ var submitIdea = async (id, userId) => {
 };
 var memberIdeasService = {
   getMemberIdeas,
+  getRecentIdeas: getRecentIdeas3,
   createIdea,
   updateIdea,
   deleteIdea,
@@ -2664,6 +2591,40 @@ var getAdminIdeas = async (params) => {
     return { success: false, message: "Failed to fetch ideas" };
   }
 };
+var getPendingIdeas = async (limit) => {
+  try {
+    const ideas = await prisma.idea.findMany({
+      where: { status: "PENDING" },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      include: {
+        author: {
+          select: { id: true, name: true, email: true, image: true }
+        },
+        categories: {
+          include: {
+            category: { select: { id: true, name: true } }
+          }
+        }
+      }
+    });
+    return {
+      success: true,
+      data: ideas.map((idea) => ({
+        id: idea.id,
+        title: idea.title,
+        problemStatement: idea.problemStatement,
+        author: idea.author,
+        category: idea.categories[0]?.category || { id: "", name: "Uncategorized" },
+        createdAt: idea.createdAt,
+        voteScore: idea.voteScore
+      }))
+    };
+  } catch (error) {
+    console.error("Get pending ideas error:", error);
+    return { success: false, message: "Failed to fetch pending ideas" };
+  }
+};
 var adminDeleteIdea = async (ideaId, adminId, reason) => {
   try {
     const idea = await prisma.idea.findUnique({
@@ -2764,6 +2725,7 @@ var featureIdea = async (id) => {
 };
 var adminIdeasService = {
   getAdminIdeas,
+  getPendingIdeas,
   adminDeleteIdea,
   approveIdea,
   rejectIdea,
@@ -2786,6 +2748,22 @@ var getMemberIdeas2 = async (req, res, next) => {
       status,
       sortBy
     });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getRecentIdeas4 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const limit = parseInt(req.query.limit) || 5;
+    const result = await memberIdeasService.getRecentIdeas(userId, limit);
     if (!result.success) {
       return res.status(400).json(result);
     }
@@ -2933,6 +2911,7 @@ var submitIdea2 = async (req, res, next) => {
 };
 var memberIdeasController = {
   getMemberIdeas: getMemberIdeas2,
+  getRecentIdeas: getRecentIdeas4,
   createIdea: createIdea2,
   updateIdea: updateIdea2,
   deleteIdea: deleteIdea2,
@@ -2956,6 +2935,21 @@ var getAdminIdeas2 = async (req, res, next) => {
       status,
       sortBy
     });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getPendingIdeas2 = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const result = await adminIdeasService.getPendingIdeas(limit);
     if (!result.success) {
       return res.status(400).json(result);
     }
@@ -3050,6 +3044,7 @@ var featureIdea2 = async (req, res, next) => {
 };
 var adminIdeasController = {
   getAdminIdeas: getAdminIdeas2,
+  getPendingIdeas: getPendingIdeas2,
   adminDeleteIdea: adminDeleteIdea2,
   approveIdea: approveIdea2,
   rejectIdea: rejectIdea2,
@@ -3058,21 +3053,24 @@ var adminIdeasController = {
 
 // src/modules/ideas/ideas.route.ts
 var router5 = express5.Router();
+router5.get("/admin/ideas", auth_default(Role.ADMIN), adminIdeasController.getAdminIdeas);
+router5.get("/ideas/pending", auth_default(Role.ADMIN), adminIdeasController.getPendingIdeas);
+router5.delete("/admin/:id", auth_default(Role.ADMIN), adminIdeasController.adminDeleteIdea);
+router5.patch("/:id/approve", auth_default(Role.ADMIN), adminIdeasController.approveIdea);
+router5.patch("/:id/reject", auth_default(Role.ADMIN), adminIdeasController.rejectIdea);
+router5.patch("/:id/feature", auth_default(Role.ADMIN), adminIdeasController.featureIdea);
+router5.get("/member/ideas", auth_default(Role.MEMBER), memberIdeasController.getMemberIdeas);
+router5.get("/ideas/recent", auth_default(Role.MEMBER), memberIdeasController.getRecentIdeas);
+router5.post("/", auth_default(Role.MEMBER), memberIdeasController.createIdea);
+router5.patch("/member/:id", auth_default(Role.MEMBER), memberIdeasController.updateIdea);
+router5.delete("/:id", auth_default(Role.MEMBER), memberIdeasController.deleteIdea);
+router5.patch("/:id/submit", auth_default(Role.MEMBER), memberIdeasController.submitIdea);
 router5.get("/", publicIdeasController.getIdeas);
 router5.get("/featured", publicIdeasController.getFeaturedIdeas);
 router5.get("/top-voted", publicIdeasController.getTopVotedIdeas);
 router5.get("/recent", publicIdeasController.getRecentIdeas);
 router5.get("/:id", publicIdeasController.getIdeaById);
 router5.get("/slug/:slug", publicIdeasController.getIdeaBySlug);
-router5.post("/", auth_default(Role.MEMBER), memberIdeasController.createIdea);
-router5.patch("/member/:id", auth_default(Role.MEMBER), memberIdeasController.updateIdea);
-router5.delete("/:id", auth_default(Role.MEMBER), memberIdeasController.deleteIdea);
-router5.patch("/:id/submit", auth_default(Role.MEMBER), memberIdeasController.submitIdea);
-router5.get("/admin/ideas", auth_default(Role.ADMIN), adminIdeasController.getAdminIdeas);
-router5.delete("/admin/ideas/:id", auth_default(Role.ADMIN), adminIdeasController.adminDeleteIdea);
-router5.patch("/:id/approve", auth_default(Role.ADMIN), adminIdeasController.approveIdea);
-router5.patch("/:id/reject", auth_default(Role.ADMIN), adminIdeasController.rejectIdea);
-router5.patch("/:id/feature", auth_default(Role.ADMIN), adminIdeasController.featureIdea);
 var ideasRouter = router5;
 
 // src/modules/stats/stats.route.ts

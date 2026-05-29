@@ -55,16 +55,14 @@ const adminDeleteIdea = async (req: Request, res: Response, next: NextFunction) 
     try {
         const { id } = req.params;
         const adminId = req.user!.id;
-        const { reason } = req.body;
-
         if (!id || typeof id !== 'string') {
             return res.status(400).json({
                 success: false,
                 message: "Invalid idea ID",
             });
         }
-
-        const result = await adminIdeasService.adminDeleteIdea(id, adminId, reason);
+        
+        const result = await adminIdeasService.adminDeleteIdea(id, adminId);
 
         if (!result.success) {
             return res.status(400).json(result);
@@ -79,7 +77,6 @@ const adminDeleteIdea = async (req: Request, res: Response, next: NextFunction) 
 const approveIdea = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-
         if (!id || typeof id !== 'string') {
             return res.status(400).json({
                 success: false,

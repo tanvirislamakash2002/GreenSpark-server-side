@@ -29,7 +29,6 @@ const loadAuth = async () => {
 const auth = (...roles: Role[]) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
-
             const authInstance = await loadAuth();
             // get user session
             const session = await authInstance.api.getSession({
@@ -67,6 +66,7 @@ const auth = (...roles: Role[]) => {
                 emailVerified: session.user.emailVerified,
                 accountStatus: userFromDb?.accountStatus
             }
+
             if (roles.length && !roles.includes(req.user.role as Role)) {
                 return res.status(403).json({
                     success: false,

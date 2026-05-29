@@ -11,6 +11,8 @@ import { categoryRouter } from "./modules/category/category.route";
 import { ideasRouter } from "./modules/ideas/ideas.route";
 import { statsRouter } from "./modules/stats/stats.route";
 import { newsletterRouter } from "./modules/newsletter/newsletter.route";
+import { bookmarkRouter } from "./modules/bookmarks/bookmark.route";
+import { voteRouter } from "./modules/votes/vote.route";
 
 const app: Application = express()
 
@@ -54,8 +56,10 @@ app.all("/api/auth/*splat", toNodeHandler(auth));
 
 app.use("/api/v1/categories", categoryRouter);
 app.use("/api/v1/ideas", ideasRouter);
+app.use("/api/v1/votes", voteRouter);
 app.use("/api/v1/member", memberRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/bookmarks", bookmarkRouter);
 app.use("/api/v1/stats", statsRouter);
 app.use("/api/v1/newsletter", newsletterRouter);
 

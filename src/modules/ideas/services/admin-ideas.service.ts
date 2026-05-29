@@ -173,7 +173,7 @@ const getPendingIdeas = async (limit: number) => {
     }
 };
 
-const adminDeleteIdea = async (ideaId: string, adminId: string, reason?: string) => {
+const adminDeleteIdea = async (ideaId: string, adminId: string) => {
     try {
         // Find the idea
         const idea = await prisma.idea.findUnique({

@@ -36,7 +36,15 @@ const getFeaturedIdeas = async (req: Request, res: Response, next: NextFunction)
     try {
         const limit = parseInt(req.query.limit as string) || 3;
         const result = await publicIdeasService.getFeaturedIdeas(limit);
-        // ... rest
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: result.data,
+        });
     } catch (error) {
         next(error);
     }
@@ -46,7 +54,15 @@ const getTopVotedIdeas = async (req: Request, res: Response, next: NextFunction)
     try {
         const limit = parseInt(req.query.limit as string) || 3;
         const result = await publicIdeasService.getTopVotedIdeas(limit);
-        // ... rest
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: result.data,
+        });
     } catch (error) {
         next(error);
     }
@@ -56,7 +72,15 @@ const getRecentIdeas = async (req: Request, res: Response, next: NextFunction) =
     try {
         const limit = parseInt(req.query.limit as string) || 6;
         const result = await publicIdeasService.getRecentIdeas(limit);
-        // ... rest
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: result.data,
+        });
     } catch (error) {
         next(error);
     }
