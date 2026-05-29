@@ -10,17 +10,17 @@ enum AccountStatus {
 }
 
 model User {
-  id                      String            @id @default(uuid())
-  name                    String
-  email                   String            @unique
-  emailVerified           Boolean           @default(false)
-  image                   String?
-  role                    Role              @default(MEMBER)
-  accountStatus           AccountStatus     @default(ACTIVE)
-  phone                   String?
-  address                 String?
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  id            String        @id @default(uuid())
+  name          String
+  email         String        @unique
+  emailVerified Boolean       @default(false)
+  image         String?
+  role          Role          @default(MEMBER)
+  accountStatus AccountStatus @default(ACTIVE)
+  phone         String?
+  address       String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   // Relations
   ideas                   Idea[]
@@ -29,12 +29,14 @@ model User {
   payments                Payment[]
   bookmarks               Bookmark[]
   newsletterSubscriptions Newsletter[]
-  commentReports          CommentReport[]   @relation("ReporterReports")
-  moderatedReports        CommentReport[]   @relation("ModeratorReports")
+  commentReports          CommentReport[] @relation("ReporterReports")
+  moderatedReports        CommentReport[] @relation("ModeratorReports")
   activityLogs            ActivityLog[]
 
-  sessions                Session[]
-  accounts                Account[]
+  sessions Session[]
+  accounts Account[]
+
+  adminPreferences AdminPreferences?
 
   @@map("users")
 }

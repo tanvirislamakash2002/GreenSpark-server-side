@@ -52,6 +52,7 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   ActivityLog: 'ActivityLog',
+  AdminPreferences: 'AdminPreferences',
   User: 'User',
   Session: 'Session',
   Account: 'Account',
@@ -94,6 +95,21 @@ export const ActivityLogScalarFieldEnum = {
 } as const
 
 export type ActivityLogScalarFieldEnum = (typeof ActivityLogScalarFieldEnum)[keyof typeof ActivityLogScalarFieldEnum]
+
+
+export const AdminPreferencesScalarFieldEnum = {
+  id: 'id',
+  adminId: 'adminId',
+  newIdeaSubmissions: 'newIdeaSubmissions',
+  pendingReviewReminders: 'pendingReviewReminders',
+  reportedContent: 'reportedContent',
+  weeklySummary: 'weeklySummary',
+  systemAnnouncements: 'systemAnnouncements',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AdminPreferencesScalarFieldEnum = (typeof AdminPreferencesScalarFieldEnum)[keyof typeof AdminPreferencesScalarFieldEnum]
 
 
 export const UserScalarFieldEnum = {

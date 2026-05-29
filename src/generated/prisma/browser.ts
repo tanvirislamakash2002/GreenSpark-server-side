@@ -23,6 +23,11 @@ export * from './enums';
  */
 export type ActivityLog = Prisma.ActivityLogModel
 /**
+ * Model AdminPreferences
+ * 
+ */
+export type AdminPreferences = Prisma.AdminPreferencesModel
+/**
  * Model User
  * 
  */

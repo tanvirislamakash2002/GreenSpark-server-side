@@ -385,6 +385,7 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   ActivityLog: 'ActivityLog',
+  AdminPreferences: 'AdminPreferences',
   User: 'User',
   Session: 'Session',
   Account: 'Account',
@@ -413,7 +414,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "activityLog" | "user" | "session" | "account" | "verification" | "bookmark" | "category" | "ideaCategory" | "comment" | "commentReport" | "idea" | "newsletter" | "payment" | "vote"
+    modelProps: "activityLog" | "adminPreferences" | "user" | "session" | "account" | "verification" | "bookmark" | "category" | "ideaCategory" | "comment" | "commentReport" | "idea" | "newsletter" | "payment" | "vote"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -488,6 +489,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.ActivityLogCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.ActivityLogCountAggregateOutputType> | number
+        }
+      }
+    }
+    AdminPreferences: {
+      payload: Prisma.$AdminPreferencesPayload<ExtArgs>
+      fields: Prisma.AdminPreferencesFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.AdminPreferencesFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminPreferencesPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.AdminPreferencesFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminPreferencesPayload>
+        }
+        findFirst: {
+          args: Prisma.AdminPreferencesFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminPreferencesPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.AdminPreferencesFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminPreferencesPayload>
+        }
+        findMany: {
+          args: Prisma.AdminPreferencesFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminPreferencesPayload>[]
+        }
+        create: {
+          args: Prisma.AdminPreferencesCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminPreferencesPayload>
+        }
+        createMany: {
+          args: Prisma.AdminPreferencesCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.AdminPreferencesCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminPreferencesPayload>[]
+        }
+        delete: {
+          args: Prisma.AdminPreferencesDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminPreferencesPayload>
+        }
+        update: {
+          args: Prisma.AdminPreferencesUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminPreferencesPayload>
+        }
+        deleteMany: {
+          args: Prisma.AdminPreferencesDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.AdminPreferencesUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.AdminPreferencesUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminPreferencesPayload>[]
+        }
+        upsert: {
+          args: Prisma.AdminPreferencesUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$AdminPreferencesPayload>
+        }
+        aggregate: {
+          args: Prisma.AdminPreferencesAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAdminPreferences>
+        }
+        groupBy: {
+          args: Prisma.AdminPreferencesGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdminPreferencesGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.AdminPreferencesCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AdminPreferencesCountAggregateOutputType> | number
         }
       }
     }
@@ -1505,6 +1580,21 @@ export const ActivityLogScalarFieldEnum = {
 export type ActivityLogScalarFieldEnum = (typeof ActivityLogScalarFieldEnum)[keyof typeof ActivityLogScalarFieldEnum]
 
 
+export const AdminPreferencesScalarFieldEnum = {
+  id: 'id',
+  adminId: 'adminId',
+  newIdeaSubmissions: 'newIdeaSubmissions',
+  pendingReviewReminders: 'pendingReviewReminders',
+  reportedContent: 'reportedContent',
+  weeklySummary: 'weeklySummary',
+  systemAnnouncements: 'systemAnnouncements',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type AdminPreferencesScalarFieldEnum = (typeof AdminPreferencesScalarFieldEnum)[keyof typeof AdminPreferencesScalarFieldEnum]
+
+
 export const UserScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -2022,6 +2112,7 @@ export type PrismaClientOptions = ({
 }
 export type GlobalOmitConfig = {
   activityLog?: Prisma.ActivityLogOmit
+  adminPreferences?: Prisma.AdminPreferencesOmit
   user?: Prisma.UserOmit
   session?: Prisma.SessionOmit
   account?: Prisma.AccountOmit

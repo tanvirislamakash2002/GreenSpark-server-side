@@ -241,6 +241,7 @@ export type UserWhereInput = {
   activityLogs?: Prisma.ActivityLogListRelationFilter
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
+  adminPreferences?: Prisma.XOR<Prisma.AdminPreferencesNullableScalarRelationFilter, Prisma.AdminPreferencesWhereInput> | null
 }
 
 export type UserOrderByWithRelationInput = {
@@ -266,6 +267,7 @@ export type UserOrderByWithRelationInput = {
   activityLogs?: Prisma.ActivityLogOrderByRelationAggregateInput
   sessions?: Prisma.SessionOrderByRelationAggregateInput
   accounts?: Prisma.AccountOrderByRelationAggregateInput
+  adminPreferences?: Prisma.AdminPreferencesOrderByWithRelationInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -294,6 +296,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   activityLogs?: Prisma.ActivityLogListRelationFilter
   sessions?: Prisma.SessionListRelationFilter
   accounts?: Prisma.AccountListRelationFilter
+  adminPreferences?: Prisma.XOR<Prisma.AdminPreferencesNullableScalarRelationFilter, Prisma.AdminPreferencesWhereInput> | null
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -353,6 +356,7 @@ export type UserCreateInput = {
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -378,6 +382,7 @@ export type UserUncheckedCreateInput = {
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserUpdateInput = {
@@ -403,6 +408,7 @@ export type UserUpdateInput = {
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -428,6 +434,7 @@ export type UserUncheckedUpdateInput = {
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -538,8 +545,18 @@ export type UserUpdateOneRequiredWithoutActivityLogsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutActivityLogsInput, Prisma.UserUpdateWithoutActivityLogsInput>, Prisma.UserUncheckedUpdateWithoutActivityLogsInput>
 }
 
-export type BoolFieldUpdateOperationsInput = {
-  set?: boolean
+export type UserCreateNestedOneWithoutAdminPreferencesInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdminPreferencesInput, Prisma.UserUncheckedCreateWithoutAdminPreferencesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdminPreferencesInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutAdminPreferencesNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutAdminPreferencesInput, Prisma.UserUncheckedCreateWithoutAdminPreferencesInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutAdminPreferencesInput
+  upsert?: Prisma.UserUpsertWithoutAdminPreferencesInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutAdminPreferencesInput, Prisma.UserUpdateWithoutAdminPreferencesInput>, Prisma.UserUncheckedUpdateWithoutAdminPreferencesInput>
 }
 
 export type EnumRoleFieldUpdateOperationsInput = {
@@ -716,6 +733,7 @@ export type UserCreateWithoutActivityLogsInput = {
   moderatedReports?: Prisma.CommentReportCreateNestedManyWithoutModeratorInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateWithoutActivityLogsInput = {
@@ -740,6 +758,7 @@ export type UserUncheckedCreateWithoutActivityLogsInput = {
   moderatedReports?: Prisma.CommentReportUncheckedCreateNestedManyWithoutModeratorInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserCreateOrConnectWithoutActivityLogsInput = {
@@ -780,6 +799,7 @@ export type UserUpdateWithoutActivityLogsInput = {
   moderatedReports?: Prisma.CommentReportUpdateManyWithoutModeratorNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateWithoutActivityLogsInput = {
@@ -802,6 +822,123 @@ export type UserUncheckedUpdateWithoutActivityLogsInput = {
   newsletterSubscriptions?: Prisma.NewsletterUncheckedUpdateManyWithoutUserNestedInput
   commentReports?: Prisma.CommentReportUncheckedUpdateManyWithoutReporterNestedInput
   moderatedReports?: Prisma.CommentReportUncheckedUpdateManyWithoutModeratorNestedInput
+  sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
+}
+
+export type UserCreateWithoutAdminPreferencesInput = {
+  id?: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  role?: $Enums.Role
+  accountStatus?: $Enums.AccountStatus
+  phone?: string | null
+  address?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  ideas?: Prisma.IdeaCreateNestedManyWithoutAuthorInput
+  votes?: Prisma.VoteCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentCreateNestedManyWithoutUserInput
+  payments?: Prisma.PaymentCreateNestedManyWithoutUserInput
+  bookmarks?: Prisma.BookmarkCreateNestedManyWithoutUserInput
+  newsletterSubscriptions?: Prisma.NewsletterCreateNestedManyWithoutUserInput
+  commentReports?: Prisma.CommentReportCreateNestedManyWithoutReporterInput
+  moderatedReports?: Prisma.CommentReportCreateNestedManyWithoutModeratorInput
+  activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutAdminPreferencesInput = {
+  id?: string
+  name: string
+  email: string
+  emailVerified?: boolean
+  image?: string | null
+  role?: $Enums.Role
+  accountStatus?: $Enums.AccountStatus
+  phone?: string | null
+  address?: string | null
+  createdAt?: Date | string
+  updatedAt?: Date | string
+  ideas?: Prisma.IdeaUncheckedCreateNestedManyWithoutAuthorInput
+  votes?: Prisma.VoteUncheckedCreateNestedManyWithoutUserInput
+  comments?: Prisma.CommentUncheckedCreateNestedManyWithoutUserInput
+  payments?: Prisma.PaymentUncheckedCreateNestedManyWithoutUserInput
+  bookmarks?: Prisma.BookmarkUncheckedCreateNestedManyWithoutUserInput
+  newsletterSubscriptions?: Prisma.NewsletterUncheckedCreateNestedManyWithoutUserInput
+  commentReports?: Prisma.CommentReportUncheckedCreateNestedManyWithoutReporterInput
+  moderatedReports?: Prisma.CommentReportUncheckedCreateNestedManyWithoutModeratorInput
+  activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
+  sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutAdminPreferencesInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdminPreferencesInput, Prisma.UserUncheckedCreateWithoutAdminPreferencesInput>
+}
+
+export type UserUpsertWithoutAdminPreferencesInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutAdminPreferencesInput, Prisma.UserUncheckedUpdateWithoutAdminPreferencesInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutAdminPreferencesInput, Prisma.UserUncheckedCreateWithoutAdminPreferencesInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutAdminPreferencesInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutAdminPreferencesInput, Prisma.UserUncheckedUpdateWithoutAdminPreferencesInput>
+}
+
+export type UserUpdateWithoutAdminPreferencesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  accountStatus?: Prisma.EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  ideas?: Prisma.IdeaUpdateManyWithoutAuthorNestedInput
+  votes?: Prisma.VoteUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUpdateManyWithoutUserNestedInput
+  payments?: Prisma.PaymentUpdateManyWithoutUserNestedInput
+  bookmarks?: Prisma.BookmarkUpdateManyWithoutUserNestedInput
+  newsletterSubscriptions?: Prisma.NewsletterUpdateManyWithoutUserNestedInput
+  commentReports?: Prisma.CommentReportUpdateManyWithoutReporterNestedInput
+  moderatedReports?: Prisma.CommentReportUpdateManyWithoutModeratorNestedInput
+  activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
+  sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutAdminPreferencesInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  emailVerified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  role?: Prisma.EnumRoleFieldUpdateOperationsInput | $Enums.Role
+  accountStatus?: Prisma.EnumAccountStatusFieldUpdateOperationsInput | $Enums.AccountStatus
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  ideas?: Prisma.IdeaUncheckedUpdateManyWithoutAuthorNestedInput
+  votes?: Prisma.VoteUncheckedUpdateManyWithoutUserNestedInput
+  comments?: Prisma.CommentUncheckedUpdateManyWithoutUserNestedInput
+  payments?: Prisma.PaymentUncheckedUpdateManyWithoutUserNestedInput
+  bookmarks?: Prisma.BookmarkUncheckedUpdateManyWithoutUserNestedInput
+  newsletterSubscriptions?: Prisma.NewsletterUncheckedUpdateManyWithoutUserNestedInput
+  commentReports?: Prisma.CommentReportUncheckedUpdateManyWithoutReporterNestedInput
+  moderatedReports?: Prisma.CommentReportUncheckedUpdateManyWithoutModeratorNestedInput
+  activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
 }
@@ -828,6 +965,7 @@ export type UserCreateWithoutSessionsInput = {
   moderatedReports?: Prisma.CommentReportCreateNestedManyWithoutModeratorInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateWithoutSessionsInput = {
@@ -852,6 +990,7 @@ export type UserUncheckedCreateWithoutSessionsInput = {
   moderatedReports?: Prisma.CommentReportUncheckedCreateNestedManyWithoutModeratorInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserCreateOrConnectWithoutSessionsInput = {
@@ -892,6 +1031,7 @@ export type UserUpdateWithoutSessionsInput = {
   moderatedReports?: Prisma.CommentReportUpdateManyWithoutModeratorNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateWithoutSessionsInput = {
@@ -916,6 +1056,7 @@ export type UserUncheckedUpdateWithoutSessionsInput = {
   moderatedReports?: Prisma.CommentReportUncheckedUpdateManyWithoutModeratorNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
 }
 
 export type UserCreateWithoutAccountsInput = {
@@ -940,6 +1081,7 @@ export type UserCreateWithoutAccountsInput = {
   moderatedReports?: Prisma.CommentReportCreateNestedManyWithoutModeratorInput
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateWithoutAccountsInput = {
@@ -964,6 +1106,7 @@ export type UserUncheckedCreateWithoutAccountsInput = {
   moderatedReports?: Prisma.CommentReportUncheckedCreateNestedManyWithoutModeratorInput
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserCreateOrConnectWithoutAccountsInput = {
@@ -1004,6 +1147,7 @@ export type UserUpdateWithoutAccountsInput = {
   moderatedReports?: Prisma.CommentReportUpdateManyWithoutModeratorNestedInput
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccountsInput = {
@@ -1028,6 +1172,7 @@ export type UserUncheckedUpdateWithoutAccountsInput = {
   moderatedReports?: Prisma.CommentReportUncheckedUpdateManyWithoutModeratorNestedInput
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
 }
 
 export type UserCreateWithoutBookmarksInput = {
@@ -1052,6 +1197,7 @@ export type UserCreateWithoutBookmarksInput = {
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateWithoutBookmarksInput = {
@@ -1076,6 +1222,7 @@ export type UserUncheckedCreateWithoutBookmarksInput = {
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserCreateOrConnectWithoutBookmarksInput = {
@@ -1116,6 +1263,7 @@ export type UserUpdateWithoutBookmarksInput = {
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateWithoutBookmarksInput = {
@@ -1140,6 +1288,7 @@ export type UserUncheckedUpdateWithoutBookmarksInput = {
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
 }
 
 export type UserCreateWithoutCommentsInput = {
@@ -1164,6 +1313,7 @@ export type UserCreateWithoutCommentsInput = {
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateWithoutCommentsInput = {
@@ -1188,6 +1338,7 @@ export type UserUncheckedCreateWithoutCommentsInput = {
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserCreateOrConnectWithoutCommentsInput = {
@@ -1228,6 +1379,7 @@ export type UserUpdateWithoutCommentsInput = {
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCommentsInput = {
@@ -1252,6 +1404,7 @@ export type UserUncheckedUpdateWithoutCommentsInput = {
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
 }
 
 export type UserCreateWithoutCommentReportsInput = {
@@ -1276,6 +1429,7 @@ export type UserCreateWithoutCommentReportsInput = {
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateWithoutCommentReportsInput = {
@@ -1300,6 +1454,7 @@ export type UserUncheckedCreateWithoutCommentReportsInput = {
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserCreateOrConnectWithoutCommentReportsInput = {
@@ -1329,6 +1484,7 @@ export type UserCreateWithoutModeratedReportsInput = {
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateWithoutModeratedReportsInput = {
@@ -1353,6 +1509,7 @@ export type UserUncheckedCreateWithoutModeratedReportsInput = {
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserCreateOrConnectWithoutModeratedReportsInput = {
@@ -1393,6 +1550,7 @@ export type UserUpdateWithoutCommentReportsInput = {
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateWithoutCommentReportsInput = {
@@ -1417,6 +1575,7 @@ export type UserUncheckedUpdateWithoutCommentReportsInput = {
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUpsertWithoutModeratedReportsInput = {
@@ -1452,6 +1611,7 @@ export type UserUpdateWithoutModeratedReportsInput = {
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateWithoutModeratedReportsInput = {
@@ -1476,6 +1636,7 @@ export type UserUncheckedUpdateWithoutModeratedReportsInput = {
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
 }
 
 export type UserCreateWithoutIdeasInput = {
@@ -1500,6 +1661,7 @@ export type UserCreateWithoutIdeasInput = {
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateWithoutIdeasInput = {
@@ -1524,6 +1686,7 @@ export type UserUncheckedCreateWithoutIdeasInput = {
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserCreateOrConnectWithoutIdeasInput = {
@@ -1564,6 +1727,7 @@ export type UserUpdateWithoutIdeasInput = {
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateWithoutIdeasInput = {
@@ -1588,6 +1752,7 @@ export type UserUncheckedUpdateWithoutIdeasInput = {
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
 }
 
 export type UserCreateWithoutNewsletterSubscriptionsInput = {
@@ -1612,6 +1777,7 @@ export type UserCreateWithoutNewsletterSubscriptionsInput = {
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateWithoutNewsletterSubscriptionsInput = {
@@ -1636,6 +1802,7 @@ export type UserUncheckedCreateWithoutNewsletterSubscriptionsInput = {
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserCreateOrConnectWithoutNewsletterSubscriptionsInput = {
@@ -1676,6 +1843,7 @@ export type UserUpdateWithoutNewsletterSubscriptionsInput = {
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateWithoutNewsletterSubscriptionsInput = {
@@ -1700,6 +1868,7 @@ export type UserUncheckedUpdateWithoutNewsletterSubscriptionsInput = {
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
 }
 
 export type UserCreateWithoutPaymentsInput = {
@@ -1724,6 +1893,7 @@ export type UserCreateWithoutPaymentsInput = {
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateWithoutPaymentsInput = {
@@ -1748,6 +1918,7 @@ export type UserUncheckedCreateWithoutPaymentsInput = {
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserCreateOrConnectWithoutPaymentsInput = {
@@ -1788,6 +1959,7 @@ export type UserUpdateWithoutPaymentsInput = {
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateWithoutPaymentsInput = {
@@ -1812,6 +1984,7 @@ export type UserUncheckedUpdateWithoutPaymentsInput = {
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
 }
 
 export type UserCreateWithoutVotesInput = {
@@ -1836,6 +2009,7 @@ export type UserCreateWithoutVotesInput = {
   activityLogs?: Prisma.ActivityLogCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesCreateNestedOneWithoutAdminInput
 }
 
 export type UserUncheckedCreateWithoutVotesInput = {
@@ -1860,6 +2034,7 @@ export type UserUncheckedCreateWithoutVotesInput = {
   activityLogs?: Prisma.ActivityLogUncheckedCreateNestedManyWithoutUserInput
   sessions?: Prisma.SessionUncheckedCreateNestedManyWithoutUserInput
   accounts?: Prisma.AccountUncheckedCreateNestedManyWithoutUserInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedCreateNestedOneWithoutAdminInput
 }
 
 export type UserCreateOrConnectWithoutVotesInput = {
@@ -1900,6 +2075,7 @@ export type UserUpdateWithoutVotesInput = {
   activityLogs?: Prisma.ActivityLogUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUpdateOneWithoutAdminNestedInput
 }
 
 export type UserUncheckedUpdateWithoutVotesInput = {
@@ -1924,6 +2100,7 @@ export type UserUncheckedUpdateWithoutVotesInput = {
   activityLogs?: Prisma.ActivityLogUncheckedUpdateManyWithoutUserNestedInput
   sessions?: Prisma.SessionUncheckedUpdateManyWithoutUserNestedInput
   accounts?: Prisma.AccountUncheckedUpdateManyWithoutUserNestedInput
+  adminPreferences?: Prisma.AdminPreferencesUncheckedUpdateOneWithoutAdminNestedInput
 }
 
 
@@ -2070,6 +2247,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   activityLogs?: boolean | Prisma.User$activityLogsArgs<ExtArgs>
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.User$accountsArgs<ExtArgs>
+  adminPreferences?: boolean | Prisma.User$adminPreferencesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -2128,6 +2306,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   activityLogs?: boolean | Prisma.User$activityLogsArgs<ExtArgs>
   sessions?: boolean | Prisma.User$sessionsArgs<ExtArgs>
   accounts?: boolean | Prisma.User$accountsArgs<ExtArgs>
+  adminPreferences?: boolean | Prisma.User$adminPreferencesArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
@@ -2147,6 +2326,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     activityLogs: Prisma.$ActivityLogPayload<ExtArgs>[]
     sessions: Prisma.$SessionPayload<ExtArgs>[]
     accounts: Prisma.$AccountPayload<ExtArgs>[]
+    adminPreferences: Prisma.$AdminPreferencesPayload<ExtArgs> | null
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -2565,6 +2745,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   activityLogs<T extends Prisma.User$activityLogsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$activityLogsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$ActivityLogPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   sessions<T extends Prisma.User$sessionsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$sessionsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$SessionPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   accounts<T extends Prisma.User$accountsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$accountsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$AccountPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
+  adminPreferences<T extends Prisma.User$adminPreferencesArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$adminPreferencesArgs<ExtArgs>>): Prisma.Prisma__AdminPreferencesClient<runtime.Types.Result.GetResult<Prisma.$AdminPreferencesPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -3259,6 +3440,25 @@ export type User$accountsArgs<ExtArgs extends runtime.Types.Extensions.InternalA
   take?: number
   skip?: number
   distinct?: Prisma.AccountScalarFieldEnum | Prisma.AccountScalarFieldEnum[]
+}
+
+/**
+ * User.adminPreferences
+ */
+export type User$adminPreferencesArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the AdminPreferences
+   */
+  select?: Prisma.AdminPreferencesSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the AdminPreferences
+   */
+  omit?: Prisma.AdminPreferencesOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.AdminPreferencesInclude<ExtArgs> | null
+  where?: Prisma.AdminPreferencesWhereInput
 }
 
 /**

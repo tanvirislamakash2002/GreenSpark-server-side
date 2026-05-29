@@ -1,0 +1,15 @@
+model AdminPreferences {
+  id                      String   @id @default(uuid())
+  adminId                 String   @unique
+  newIdeaSubmissions      Boolean  @default(true)
+  pendingReviewReminders  Boolean  @default(true)
+  reportedContent         Boolean  @default(true)
+  weeklySummary           Boolean  @default(false)
+  systemAnnouncements     Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  admin                   User     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("admin_preferences")
+}
