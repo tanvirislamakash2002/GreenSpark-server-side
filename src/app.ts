@@ -19,6 +19,7 @@ import { userManagementRouter } from "./modules/users/user-management.route";
 import { paymentRouter } from "./modules/payment/payment.route";
 import { optionalAuth } from "./middlewares/optionalAuth";
 import { PaymentController } from "./modules/payment/payment.controller";
+import { commentRouter } from "./modules/comments/comment.route";
 
 const app: Application = express()
 
@@ -69,6 +70,7 @@ app.use('/api/v1/upload', uploadRouter);
 app.use("/api/v1/categories", categoryRouter);
 app.use("/api/v1/ideas", ideasRouter);
 app.use("/api/v1/votes", voteRouter);
+app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/member", memberRouter);
 app.use("/api/v1/admin", adminRouter);
 app.use("/api/v1/members", memberProfileRouter);

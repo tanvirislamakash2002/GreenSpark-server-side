@@ -30,8 +30,6 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
                 emailVerified: session.user.emailVerified,
                 accountStatus: userFromDb?.accountStatus || 'ACTIVE'
             };
-        } else {
-            console.log(" No session found");
         }
         next();
     } catch (error) {
