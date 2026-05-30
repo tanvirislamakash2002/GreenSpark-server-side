@@ -1,5 +1,5 @@
 import { toNodeHandler } from "better-auth/node";
-import express, { Application } from "express"
+import express, { Application, Request, Response } from "express"
 import { auth } from "./lib/auth";
 import cors from "cors"
 import errorHandler from "./middlewares/globalErrorHandler";
@@ -16,6 +16,9 @@ import { voteRouter } from "./modules/votes/vote.route";
 import { memberProfileRouter } from "./modules/profile/member/member-profile.route";
 import { adminSettingsRouter } from "./modules/settings/admin/admin-settings.route";
 import { userManagementRouter } from "./modules/users/user-management.route";
+import { paymentRouter } from "./modules/payment/payment.route";
+import { optionalAuth } from "./middlewares/optionalAuth";
+import { PaymentController } from "./modules/payment/payment.controller";
 
 const app: Application = express()
 
@@ -29,6 +32,7 @@ const allowedOrigins = [
     process.env.PROD_APP_URL, // Production frontend URL
 ].filter(Boolean);
 
+
 app.use(
     cors({
         origin: (origin, callback) => {
@@ -40,9 +44,9 @@ app.use(
                 allowedOrigins.includes(origin) ||
                 /^https:\/\/invio-.*\.vercel\.app$/.test(origin) ||  // ← CHANGE to your frontend name
                 /^https:\/\/.*\.vercel\.app$/.test(origin); // Any Vercel deployment
-
-            if (isAllowed) {
-                callback(null, true);
+                
+                if (isAllowed) {
+                    callback(null, true);
             } else {
                 callback(new Error(`Origin ${origin} not allowed by CORS`));
             }
@@ -53,10 +57,15 @@ app.use(
         exposedHeaders: ["Set-Cookie"],
     }),
 );
+app.post("/api/v1/payments/webhook", express.raw({ type: "application/json" }), PaymentController.handleWebhook);
 app.use(express.json())
+
+app.use(optionalAuth);
 
 app.all("/api/auth/*splat", toNodeHandler(auth));
 
+app.use("/api/v1/payments", paymentRouter);
+app.use('/api/v1/upload', uploadRouter);
 app.use("/api/v1/categories", categoryRouter);
 app.use("/api/v1/ideas", ideasRouter);
 app.use("/api/v1/votes", voteRouter);
@@ -68,8 +77,6 @@ app.use("/api/v1/admin/users", userManagementRouter);
 app.use("/api/v1/bookmarks", bookmarkRouter);
 app.use("/api/v1/stats", statsRouter);
 app.use("/api/v1/newsletter", newsletterRouter);
-
-app.use('/api/v1/upload', uploadRouter);
 
 app.get("/", (req, res) => {
     res.send("Hello, World!")

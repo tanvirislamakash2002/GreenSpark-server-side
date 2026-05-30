@@ -89,7 +89,7 @@ const getRecentIdeas = async (req: Request, res: Response, next: NextFunction) =
 const getIdeaById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
-        
+        const userId = req.user?.id;
         if (!id || typeof id !== 'string') {
             return res.status(400).json({
                 success: false,
@@ -97,7 +97,7 @@ const getIdeaById = async (req: Request, res: Response, next: NextFunction) => {
             });
         }
 
-        const result = await publicIdeasService.getIdeaById(id);
+        const result = await publicIdeasService.getIdeaById(id, userId);
 
         if (!result.success) {
             return res.status(404).json(result);

@@ -21,6 +21,13 @@ model Payment {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  // Stripe fields
+  stripePaymentIntentId String?   @unique
+  stripeEventId         String?   @unique  
+  stripeCustomerId      String?
+  receiptUrl            String?
+  metadata              Json?
+
   // Foreign Keys
   userId        String
   ideaId        String
@@ -33,5 +40,7 @@ model Payment {
   @@index([ideaId])
   @@index([status])
   @@index([transactionId])
+  @@index([stripePaymentIntentId])
+  @@index([stripeEventId])  
   @@map("payments")
 }

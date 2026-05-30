@@ -1,4 +1,4 @@
-import { Prisma } from "../../../generated/prisma/client";
+import { PaymentStatus, Prisma } from "../../../generated/prisma/client";
 import { prisma } from "../../../lib/prisma";
 
 const getIdeas = async (params: {
@@ -237,7 +237,7 @@ const getRecentIdeas = async (limit: number) => {
     }
 };
 
-const getIdeaById = async (id: string) => {
+const getIdeaById = async (id: string, userId?: string) => {
     try {
         const idea = await prisma.idea.findUnique({
             where: { id },
@@ -263,38 +263,81 @@ const getIdeaById = async (id: string) => {
             return { success: false, message: "Idea not found" };
         }
 
-        // Increment view count
+        // Check if user has full access
+        let hasFullAccess = false;
+        
+        if (idea.isPaid && idea.status === "APPROVED") {
+            // Check if user is logged in and has paid
+            if (userId) {
+                const payment = await prisma.payment.findFirst({
+                    where: {
+                        userId,
+                        ideaId: id,
+                        status: PaymentStatus.COMPLETED,
+                    },
+                });
+                hasFullAccess = !!payment;
+            }
+        } else {
+            // Free ideas - always full access
+            hasFullAccess = true;
+        }
+
+        // Increment view count (always increment)
         await prisma.idea.update({
             where: { id },
             data: { viewCount: { increment: 1 } },
         });
 
-        return {
-            success: true,
-            data: {
-                id: idea.id,
-                title: idea.title,
-                problemStatement: idea.problemStatement,
-                solution: idea.solution,
-                description: idea.description,
-                imageUrl: idea.imageUrl,
-                status: idea.status,
-                isPaid: idea.isPaid,
-                price: idea.price,
-                feedback: idea.feedback,
-                voteScore: idea.voteScore,
-                viewCount: idea.viewCount + 1,
-                commentCount: idea.commentCount,
-                author: idea.author,
-                categories: idea.categories.map(c => ({
-                    id: c.category.id,
-                    name: c.category.name,
-                    slug: c.category.slug,
-                })),
-                createdAt: idea.createdAt,
-                updatedAt: idea.updatedAt,
-            },
+        // Prepare response based on access level
+        const baseData = {
+            id: idea.id,
+            title: idea.title,
+            imageUrl: idea.imageUrl,
+            status: idea.status,
+            isPaid: idea.isPaid,
+            price: idea.price,
+            voteScore: idea.voteScore,
+            viewCount: idea.viewCount + 1,
+            commentCount: idea.commentCount,
+            author: idea.author,
+            categories: idea.categories.map(c => ({
+                id: c.category.id,
+                name: c.category.name,
+                slug: c.category.slug,
+            })),
+            createdAt: idea.createdAt,
+            updatedAt: idea.updatedAt,
         };
+
+        if (hasFullAccess) {
+            // Full access - show everything
+            return {
+                success: true,
+                data: {
+                    ...baseData,
+                    problemStatement: idea.problemStatement,
+                    solution: idea.solution,
+                    description: idea.description,
+                    feedback: idea.feedback,
+                    hasFullAccess: true,
+                },
+            };
+        } else {
+            // Limited access - only show problem statement, hide solution and description
+            return {
+                success: true,
+                data: {
+                    ...baseData,
+                    problemStatement: idea.problemStatement, // Show this as preview
+                    solution: "Purchase this idea to see the complete solution.",
+                    description: "Purchase this idea to see the complete description.",
+                    feedback: idea.feedback,
+                    hasFullAccess: false,
+                    requiresPayment: true,
+                },
+            };
+        }
     } catch (error) {
         console.error("Get idea by ID error:", error);
         return { success: false, message: "Failed to fetch idea" };
