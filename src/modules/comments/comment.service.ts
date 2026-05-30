@@ -1,5 +1,171 @@
 import { prisma } from "../../lib/prisma";
 
+const getUserComments = async (
+    userId: string,
+    params: {
+        search?: string;
+        sortBy?: string;
+        dateRange?: string;
+        page: number;
+        limit: number;
+    }
+) => {
+    try {
+        const { search, sortBy, dateRange, page, limit } = params;
+        const skip = (page - 1) * limit;
+
+        // Build where clause
+        const where: any = {
+            userId,
+            isDeleted: false,
+        };
+
+        // Search by comment content or idea title
+        if (search) {
+            where.OR = [
+                { content: { contains: search, mode: 'insensitive' } },
+                {
+                    idea: {
+                        title: { contains: search, mode: 'insensitive' },
+                    },
+                },
+            ];
+        }
+
+        // Date range filter
+        if (dateRange) {
+            const now = new Date();
+            let startDate: Date;
+
+            switch (dateRange) {
+                case 'week':
+                    startDate = new Date(now.setDate(now.getDate() - 7));
+                    break;
+                case 'month':
+                    startDate = new Date(now.setDate(now.getDate() - 30));
+                    break;
+                default:
+                    startDate = new Date(0); // Beginning of time
+            }
+
+            if (dateRange !== 'all') {
+                where.createdAt = { gte: startDate };
+            }
+        }
+
+        // Build order by
+        let orderBy: any = {};
+        switch (sortBy) {
+            case 'oldest':
+                orderBy = { createdAt: 'asc' };
+                break;
+            case 'mostVoted':
+                // This would require comment voting feature
+                orderBy = { createdAt: 'desc' };
+                break;
+            default:
+                orderBy = { createdAt: 'desc' };
+        }
+
+        // Get comments with idea details
+        const comments = await prisma.comment.findMany({
+            where,
+            skip,
+            take: limit,
+            orderBy,
+            include: {
+                idea: {
+                    select: {
+                        id: true,
+                        title: true,
+                        imageUrl: true,
+                        voteScore: true,
+                    },
+                },
+                _count: {
+                    select: {
+                        replies: {
+                            where: { isDeleted: false },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Get total count for pagination
+        const totalItems = await prisma.comment.count({ where });
+
+        // Calculate stats
+        const totalComments = await prisma.comment.count({
+            where: { userId, isDeleted: false },
+        });
+
+        // Find most active idea (where user commented most)
+        const mostActiveIdeaResult = await prisma.comment.groupBy({
+            by: ['ideaId'],
+            where: { userId, isDeleted: false },
+            _count: { ideaId: true },
+            orderBy: { _count: { ideaId: 'desc' } },
+            take: 1,
+        });
+
+        let mostActiveIdea: string | null = null;
+        if (mostActiveIdeaResult && mostActiveIdeaResult.length > 0 && mostActiveIdeaResult[0]) {
+            const idea = await prisma.idea.findUnique({
+                where: { id: mostActiveIdeaResult[0].ideaId },
+                select: { title: true },
+            });
+            mostActiveIdea = idea?.title || null;
+        }
+
+        // Get last comment date
+        const lastComment = await prisma.comment.findFirst({
+            where: { userId, isDeleted: false },
+            orderBy: { createdAt: 'desc' },
+            select: { createdAt: true },
+        });
+
+        const lastCommentDate = lastComment?.createdAt || null;
+
+        // Format comments
+        const formattedComments = comments.map(comment => ({
+            id: comment.id,
+            content: comment.content,
+            isDeleted: comment.isDeleted,
+            createdAt: comment.createdAt,
+            updatedAt: comment.updatedAt,
+            idea: {
+                id: comment.idea.id,
+                title: comment.idea.title,
+                imageUrl: comment.idea.imageUrl,
+                voteScore: comment.idea.voteScore,
+            },
+            replyCount: comment._count.replies,
+        }));
+
+        return {
+            success: true,
+            data: {
+                comments: formattedComments,
+                stats: {
+                    totalComments,
+                    mostActiveIdea,
+                    lastCommentDate: lastCommentDate?.toISOString() || null,
+                },
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(totalItems / limit),
+                    totalItems,
+                    itemsPerPage: limit,
+                },
+            },
+        };
+    } catch (error) {
+        console.error("Get user comments error:", error);
+        return { success: false, message: "Failed to fetch comments" };
+    }
+};
+
 const getComments = async (ideaId: string, page: number, limit: number) => {
     try {
         const skip = (page - 1) * limit;
@@ -375,6 +541,7 @@ const reportComment = async (commentId: string, reporterId: string, reason: stri
 };
 
 export const commentService = {
+    getUserComments,
     getComments,
     createComment,
     updateComment,

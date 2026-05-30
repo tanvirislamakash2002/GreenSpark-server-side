@@ -11,6 +11,7 @@ router.get("/idea/:ideaId", commentController.getComments);
 // Authenticated routes
 router.use(auth(Role.MEMBER, Role.ADMIN));
 
+router.get("/user/comments", commentController.getUserComments);
 router.post("/idea/:ideaId", commentController.createComment);
 router.patch("/:commentId", commentController.updateComment);
 router.delete("/:commentId", commentController.deleteComment);

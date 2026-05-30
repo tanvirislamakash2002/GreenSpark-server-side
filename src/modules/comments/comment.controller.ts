@@ -1,6 +1,36 @@
 import { Request, Response, NextFunction } from "express";
 import { commentService } from "./comment.service";
 
+const getUserComments = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+        const search = req.query.search as string;
+        const sortBy = req.query.sortBy as string;
+        const dateRange = req.query.dateRange as string;
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+
+        const result = await commentService.getUserComments(userId, {
+            search,
+            sortBy,
+            dateRange,
+            page,
+            limit,
+        });
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: result.data,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 const getComments = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { ideaId } = req.params;
@@ -192,6 +222,7 @@ const reportComment = async (req: Request, res: Response, next: NextFunction) =>
 };
 
 export const commentController = {
+    getUserComments,
     getComments,
     createComment,
     updateComment,

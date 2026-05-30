@@ -1,13 +1,15 @@
 import {
+  PaymentMethod,
+  PaymentStatus,
   Role,
   auth,
   prisma,
   prismaNamespace_exports
-} from "./chunk-KDVDRSJO.js";
+} from "./chunk-VGRVNKBL.js";
 
 // src/app.ts
 import { toNodeHandler } from "better-auth/node";
-import express8 from "express";
+import express15 from "express";
 import cors from "cors";
 
 // src/middlewares/globalErrorHandler.ts
@@ -69,7 +71,7 @@ import express from "express";
 var betterAuth;
 var loadAuth = async () => {
   if (!betterAuth) {
-    const authModule = await import("./auth-L6VU3WWT.js");
+    const authModule = await import("./auth-NZDB23BW.js");
     betterAuth = await authModule.auth;
   }
   return betterAuth;
@@ -747,6 +749,24 @@ var memberRouter = router2;
 // src/modules/dashboard/admin/admin.route.ts
 import express3 from "express";
 
+// src/helpers/bigintHelper.ts
+var toNumber = (value) => {
+  return typeof value === "bigint" ? Number(value) : value;
+};
+var convertBigIntInObject = (obj) => {
+  if (obj === null || obj === void 0) return obj;
+  if (typeof obj === "bigint") return Number(obj);
+  if (Array.isArray(obj)) return obj.map(convertBigIntInObject);
+  if (typeof obj === "object") {
+    const result = {};
+    for (const key in obj) {
+      result[key] = convertBigIntInObject(obj[key]);
+    }
+    return result;
+  }
+  return obj;
+};
+
 // src/modules/dashboard/admin/admin.service.ts
 var getDashboardData2 = async () => {
   try {
@@ -902,7 +922,7 @@ var getDashboardData2 = async () => {
             createdAt: { gte: start, lt: end }
           }
         });
-        return { date: dateStr, count };
+        return { date: dateStr, count: toNumber(count) };
       })
     );
     const usersOverTime = await Promise.all(
@@ -921,7 +941,7 @@ var getDashboardData2 = async () => {
             createdAt: { gte: start, lt: end }
           }
         });
-        return { date: dateStr, count };
+        return { date: dateStr, count: toNumber(count) };
       })
     );
     const ideasByCategory = await prisma.$queryRaw`
@@ -939,16 +959,16 @@ var getDashboardData2 = async () => {
       success: true,
       data: {
         stats: {
-          totalUsers,
-          activeUsers,
-          suspendedUsers,
-          totalIdeas,
-          pendingIdeas,
-          approvedIdeas,
-          rejectedIdeas,
-          totalVotes,
-          totalComments,
-          totalBookmarks
+          totalUsers: toNumber(totalUsers),
+          activeUsers: toNumber(activeUsers),
+          suspendedUsers: toNumber(suspendedUsers),
+          totalIdeas: toNumber(totalIdeas),
+          pendingIdeas: toNumber(pendingIdeas),
+          approvedIdeas: toNumber(approvedIdeas),
+          rejectedIdeas: toNumber(rejectedIdeas),
+          totalVotes: toNumber(totalVotes),
+          totalComments: toNumber(totalComments),
+          totalBookmarks: toNumber(totalBookmarks)
         },
         pendingIdeas: pendingIdeasList.map((idea) => ({
           id: idea.id,
@@ -957,19 +977,19 @@ var getDashboardData2 = async () => {
           author: idea.author,
           category: idea.categories[0]?.category || { id: "", name: "Uncategorized" },
           createdAt: idea.createdAt,
-          voteScore: idea.voteScore
+          voteScore: toNumber(idea.voteScore)
         })),
         recentActivity: activities,
         topContributors: contributors,
         recentUsers: recentUsersList,
-        reportedCommentsCount,
+        reportedCommentsCount: toNumber(reportedCommentsCount),
         chartData: {
           ideasOverTime,
           usersOverTime,
-          ideasByCategory,
+          ideasByCategory: convertBigIntInObject(ideasByCategory),
           ideasByStatus: ideasByStatus.map((item) => ({
             status: item.status,
-            count: item._count.status
+            count: toNumber(item._count.status)
           }))
         }
       }
@@ -1007,16 +1027,16 @@ var getStats3 = async () => {
     return {
       success: true,
       data: {
-        totalUsers,
-        activeUsers,
-        suspendedUsers,
-        totalIdeas,
-        pendingIdeas,
-        approvedIdeas,
-        rejectedIdeas,
-        totalVotes,
-        totalComments,
-        totalBookmarks
+        totalUsers: toNumber(totalUsers),
+        activeUsers: toNumber(activeUsers),
+        suspendedUsers: toNumber(suspendedUsers),
+        totalIdeas: toNumber(totalIdeas),
+        pendingIdeas: toNumber(pendingIdeas),
+        approvedIdeas: toNumber(approvedIdeas),
+        rejectedIdeas: toNumber(rejectedIdeas),
+        totalVotes: toNumber(totalVotes),
+        totalComments: toNumber(totalComments),
+        totalBookmarks: toNumber(totalBookmarks)
       }
     };
   } catch (error) {
@@ -1090,10 +1110,11 @@ var getDashboard2 = async (req, res, next) => {
     if (!result.success) {
       return res.status(400).json(result);
     }
-    return res.status(200).json({
+    const response = {
       success: true,
       data: result.data
-    });
+    };
+    return res.status(200).json(response);
   } catch (error) {
     next(error);
   }
@@ -1923,7 +1944,7 @@ var getRecentIdeas = async (limit) => {
     return { success: false, message: "Failed to fetch recent ideas" };
   }
 };
-var getIdeaById = async (id) => {
+var getIdeaById = async (id, userId) => {
   try {
     const idea = await prisma.idea.findUnique({
       where: { id },
@@ -1947,36 +1968,71 @@ var getIdeaById = async (id) => {
     if (!idea) {
       return { success: false, message: "Idea not found" };
     }
+    let hasFullAccess = false;
+    if (idea.isPaid && idea.status === "APPROVED") {
+      if (userId) {
+        const payment = await prisma.payment.findFirst({
+          where: {
+            userId,
+            ideaId: id,
+            status: PaymentStatus.COMPLETED
+          }
+        });
+        hasFullAccess = !!payment;
+      }
+    } else {
+      hasFullAccess = true;
+    }
     await prisma.idea.update({
       where: { id },
       data: { viewCount: { increment: 1 } }
     });
-    return {
-      success: true,
-      data: {
-        id: idea.id,
-        title: idea.title,
-        problemStatement: idea.problemStatement,
-        solution: idea.solution,
-        description: idea.description,
-        imageUrl: idea.imageUrl,
-        status: idea.status,
-        isPaid: idea.isPaid,
-        price: idea.price,
-        feedback: idea.feedback,
-        voteScore: idea.voteScore,
-        viewCount: idea.viewCount + 1,
-        commentCount: idea.commentCount,
-        author: idea.author,
-        categories: idea.categories.map((c) => ({
-          id: c.category.id,
-          name: c.category.name,
-          slug: c.category.slug
-        })),
-        createdAt: idea.createdAt,
-        updatedAt: idea.updatedAt
-      }
+    const baseData = {
+      id: idea.id,
+      title: idea.title,
+      imageUrl: idea.imageUrl,
+      status: idea.status,
+      isPaid: idea.isPaid,
+      price: idea.price,
+      voteScore: idea.voteScore,
+      viewCount: idea.viewCount + 1,
+      commentCount: idea.commentCount,
+      author: idea.author,
+      categories: idea.categories.map((c) => ({
+        id: c.category.id,
+        name: c.category.name,
+        slug: c.category.slug
+      })),
+      createdAt: idea.createdAt,
+      updatedAt: idea.updatedAt
     };
+    if (hasFullAccess) {
+      return {
+        success: true,
+        data: {
+          ...baseData,
+          problemStatement: idea.problemStatement,
+          solution: idea.solution,
+          description: idea.description,
+          feedback: idea.feedback,
+          hasFullAccess: true
+        }
+      };
+    } else {
+      return {
+        success: true,
+        data: {
+          ...baseData,
+          problemStatement: idea.problemStatement,
+          // Show this as preview
+          solution: "Purchase this idea to see the complete solution.",
+          description: "Purchase this idea to see the complete description.",
+          feedback: idea.feedback,
+          hasFullAccess: false,
+          requiresPayment: true
+        }
+      };
+    }
   } catch (error) {
     console.error("Get idea by ID error:", error);
     return { success: false, message: "Failed to fetch idea" };
@@ -2080,6 +2136,13 @@ var getFeaturedIdeas2 = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 3;
     const result = await publicIdeasService.getFeaturedIdeas(limit);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
   } catch (error) {
     next(error);
   }
@@ -2088,6 +2151,13 @@ var getTopVotedIdeas2 = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 3;
     const result = await publicIdeasService.getTopVotedIdeas(limit);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
   } catch (error) {
     next(error);
   }
@@ -2096,6 +2166,13 @@ var getRecentIdeas2 = async (req, res, next) => {
   try {
     const limit = parseInt(req.query.limit) || 6;
     const result = await publicIdeasService.getRecentIdeas(limit);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
   } catch (error) {
     next(error);
   }
@@ -2103,13 +2180,14 @@ var getRecentIdeas2 = async (req, res, next) => {
 var getIdeaById2 = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id;
     if (!id || typeof id !== "string") {
       return res.status(400).json({
         success: false,
         message: "Invalid idea ID"
       });
     }
-    const result = await publicIdeasService.getIdeaById(id);
+    const result = await publicIdeasService.getIdeaById(id, userId);
     if (!result.success) {
       return res.status(404).json(result);
     }
@@ -2625,7 +2703,7 @@ var getPendingIdeas = async (limit) => {
     return { success: false, message: "Failed to fetch pending ideas" };
   }
 };
-var adminDeleteIdea = async (ideaId, adminId, reason) => {
+var adminDeleteIdea = async (ideaId, adminId) => {
   try {
     const idea = await prisma.idea.findUnique({
       where: { id: ideaId },
@@ -2965,14 +3043,13 @@ var adminDeleteIdea2 = async (req, res, next) => {
   try {
     const { id } = req.params;
     const adminId = req.user.id;
-    const { reason } = req.body;
     if (!id || typeof id !== "string") {
       return res.status(400).json({
         success: false,
         message: "Invalid idea ID"
       });
     }
-    const result = await adminIdeasService.adminDeleteIdea(id, adminId, reason);
+    const result = await adminIdeasService.adminDeleteIdea(id, adminId);
     if (!result.success) {
       return res.status(400).json(result);
     }
@@ -3304,8 +3381,3360 @@ var router7 = express7.Router();
 router7.post("/subscribe", newsletterController.subscribe);
 var newsletterRouter = router7;
 
+// src/modules/bookmarks/bookmark.route.ts
+import express8 from "express";
+
+// src/modules/bookmarks/bookmark.service.ts
+var addBookmark = async (userId, ideaId) => {
+  try {
+    const idea = await prisma.idea.findUnique({
+      where: { id: ideaId }
+    });
+    if (!idea) {
+      return { success: false, message: "Idea not found" };
+    }
+    const existing = await prisma.bookmark.findUnique({
+      where: {
+        userId_ideaId: {
+          userId,
+          ideaId
+        }
+      }
+    });
+    if (existing) {
+      return { success: false, message: "Idea already bookmarked" };
+    }
+    await prisma.bookmark.create({
+      data: {
+        userId,
+        ideaId
+      }
+    });
+    return { success: true, message: "Bookmark added successfully" };
+  } catch (error) {
+    console.error("Add bookmark error:", error);
+    return { success: false, message: "Failed to add bookmark" };
+  }
+};
+var removeBookmark = async (userId, ideaId) => {
+  try {
+    const bookmark = await prisma.bookmark.findUnique({
+      where: {
+        userId_ideaId: {
+          userId,
+          ideaId
+        }
+      }
+    });
+    if (!bookmark) {
+      return { success: false, message: "Bookmark not found" };
+    }
+    await prisma.bookmark.delete({
+      where: {
+        userId_ideaId: {
+          userId,
+          ideaId
+        }
+      }
+    });
+    return { success: true, message: "Bookmark removed successfully" };
+  } catch (error) {
+    console.error("Remove bookmark error:", error);
+    return { success: false, message: "Failed to remove bookmark" };
+  }
+};
+var getUserBookmarks = async (userId, page, limit, search, category, sortBy) => {
+  try {
+    const skip = (page - 1) * limit;
+    const where = { userId };
+    if (search) {
+      where.idea = {
+        OR: [
+          { title: { contains: search, mode: "insensitive" } },
+          { description: { contains: search, mode: "insensitive" } }
+        ]
+      };
+    }
+    if (category && category !== "all") {
+      where.idea = {
+        ...where.idea,
+        categories: {
+          some: {
+            category: { slug: category }
+          }
+        }
+      };
+    }
+    let orderBy = { createdAt: "desc" };
+    if (sortBy === "oldest") orderBy = { createdAt: "asc" };
+    if (sortBy === "title") orderBy = { idea: { title: "asc" } };
+    if (sortBy === "votes") orderBy = { idea: { voteScore: "desc" } };
+    if (sortBy === "views") orderBy = { idea: { viewCount: "desc" } };
+    const bookmarks = await prisma.bookmark.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        idea: {
+          include: {
+            author: {
+              select: { id: true, name: true, image: true }
+            },
+            categories: {
+              include: { category: true }
+            }
+          }
+        }
+      }
+    });
+    const totalItems = await prisma.bookmark.count({ where: { userId } });
+    const transformedBookmarks = bookmarks.map((bookmark) => ({
+      id: bookmark.id,
+      ideaId: bookmark.idea.id,
+      ideaTitle: bookmark.idea.title,
+      ideaDescription: bookmark.idea.description,
+      ideaImage: bookmark.idea.imageUrl,
+      ideaStatus: bookmark.idea.status,
+      ideaVoteScore: bookmark.idea.voteScore,
+      ideaViewCount: bookmark.idea.viewCount,
+      ideaCommentCount: bookmark.idea.commentCount,
+      authorName: bookmark.idea.author.name,
+      authorImage: bookmark.idea.author.image,
+      categoryName: bookmark.idea.categories[0]?.category.name || "Uncategorized",
+      categorySlug: bookmark.idea.categories[0]?.category.slug || "uncategorized",
+      bookmarkedAt: bookmark.createdAt
+    }));
+    return {
+      success: true,
+      data: {
+        bookmarks: transformedBookmarks,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems,
+          itemsPerPage: limit
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Get user bookmarks error:", error);
+    return { success: false, message: "Failed to fetch bookmarks" };
+  }
+};
+var checkBookmark = async (userId, ideaId) => {
+  try {
+    const bookmark = await prisma.bookmark.findUnique({
+      where: {
+        userId_ideaId: {
+          userId,
+          ideaId
+        }
+      }
+    });
+    return {
+      success: true,
+      data: { isBookmarked: !!bookmark }
+    };
+  } catch (error) {
+    console.error("Check bookmark error:", error);
+    return { success: false, message: "Failed to check bookmark" };
+  }
+};
+var bookmarkService = {
+  addBookmark,
+  removeBookmark,
+  getUserBookmarks,
+  checkBookmark
+};
+
+// src/modules/bookmarks/bookmark.controller.ts
+var addBookmark2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { ideaId } = req.params;
+    if (!ideaId) {
+      return res.status(400).json({
+        success: false,
+        message: "Idea ID is required"
+      });
+    }
+    const result = await bookmarkService.addBookmark(userId, ideaId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+var removeBookmark2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { ideaId } = req.params;
+    if (!ideaId) {
+      return res.status(400).json({
+        success: false,
+        message: "Idea ID is required"
+      });
+    }
+    const result = await bookmarkService.removeBookmark(userId, ideaId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+var getUserBookmarks2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const result = await bookmarkService.getUserBookmarks(userId, page, limit);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var checkBookmark2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { ideaId } = req.params;
+    const result = await bookmarkService.checkBookmark(userId, ideaId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+var bookmarkController = {
+  addBookmark: addBookmark2,
+  removeBookmark: removeBookmark2,
+  getUserBookmarks: getUserBookmarks2,
+  checkBookmark: checkBookmark2
+};
+
+// src/modules/bookmarks/bookmark.route.ts
+var router8 = express8.Router();
+router8.use(auth_default(Role.MEMBER, Role.ADMIN));
+router8.post("/:ideaId", bookmarkController.addBookmark);
+router8.delete("/:ideaId", bookmarkController.removeBookmark);
+router8.get("/", bookmarkController.getUserBookmarks);
+router8.get("/check/:ideaId", bookmarkController.checkBookmark);
+var bookmarkRouter = router8;
+
+// src/modules/votes/vote.route.ts
+import express9 from "express";
+
+// src/modules/votes/vote.service.ts
+var castVote = async (userId, ideaId, voteType) => {
+  try {
+    const idea = await prisma.idea.findUnique({
+      where: { id: ideaId }
+    });
+    if (!idea) {
+      return { success: false, message: "Idea not found" };
+    }
+    const existingVote = await prisma.vote.findUnique({
+      where: {
+        userId_ideaId: {
+          userId,
+          ideaId
+        }
+      }
+    });
+    let voteChange = 0;
+    if (!existingVote) {
+      voteChange = voteType === "UP" ? 1 : -1;
+      await prisma.vote.create({
+        data: {
+          userId,
+          ideaId,
+          voteType
+        }
+      });
+    } else if (existingVote.voteType !== voteType) {
+      voteChange = voteType === "UP" ? 2 : -2;
+      await prisma.vote.update({
+        where: { id: existingVote.id },
+        data: { voteType }
+      });
+    } else {
+      voteChange = voteType === "UP" ? -1 : 1;
+      await prisma.vote.delete({
+        where: { id: existingVote.id }
+      });
+    }
+    if (voteChange !== 0) {
+      await prisma.idea.update({
+        where: { id: ideaId },
+        data: { voteScore: { increment: voteChange } }
+      });
+    }
+    const updatedIdea = await prisma.idea.findUnique({
+      where: { id: ideaId },
+      select: { voteScore: true }
+    });
+    const message = !existingVote ? `${voteType === "UP" ? "Upvoted" : "Downvoted"} successfully` : existingVote.voteType !== voteType ? `Vote changed to ${voteType === "UP" ? "upvote" : "downvote"}` : "Vote removed";
+    return {
+      success: true,
+      message,
+      data: {
+        voteScore: updatedIdea?.voteScore || 0,
+        userVote: existingVote?.voteType !== voteType ? voteType : null
+      }
+    };
+  } catch (error) {
+    console.error("Cast vote error:", error);
+    return { success: false, message: "Failed to cast vote" };
+  }
+};
+var removeVote = async (userId, ideaId) => {
+  try {
+    const existingVote = await prisma.vote.findUnique({
+      where: {
+        userId_ideaId: {
+          userId,
+          ideaId
+        }
+      }
+    });
+    if (!existingVote) {
+      return { success: false, message: "No vote found to remove" };
+    }
+    const voteChange = existingVote.voteType === "UP" ? -1 : 1;
+    await prisma.idea.update({
+      where: { id: ideaId },
+      data: { voteScore: { increment: voteChange } }
+    });
+    await prisma.vote.delete({
+      where: { id: existingVote.id }
+    });
+    const updatedIdea = await prisma.idea.findUnique({
+      where: { id: ideaId },
+      select: { voteScore: true }
+    });
+    return {
+      success: true,
+      message: "Vote removed successfully",
+      data: {
+        voteScore: updatedIdea?.voteScore || 0,
+        userVote: null
+      }
+    };
+  } catch (error) {
+    console.error("Remove vote error:", error);
+    return { success: false, message: "Failed to remove vote" };
+  }
+};
+var getUserVote = async (userId, ideaId) => {
+  try {
+    const vote = await prisma.vote.findUnique({
+      where: {
+        userId_ideaId: {
+          userId,
+          ideaId
+        }
+      },
+      select: { voteType: true }
+    });
+    return {
+      success: true,
+      data: {
+        userVote: vote?.voteType || null
+      }
+    };
+  } catch (error) {
+    console.error("Get user vote error:", error);
+    return { success: false, message: "Failed to get user vote" };
+  }
+};
+var getUserVotes = async (userId, params) => {
+  try {
+    const { voteType, sortBy, search, category, page, limit } = params;
+    const skip = (page - 1) * limit;
+    const where = {
+      userId
+    };
+    if (voteType && voteType !== "all") {
+      where.voteType = voteType;
+    }
+    const ideaWhere = {};
+    if (search) {
+      ideaWhere.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { description: { contains: search, mode: "insensitive" } }
+      ];
+    }
+    if (category) {
+      ideaWhere.categories = {
+        some: {
+          category: {
+            slug: category
+          }
+        }
+      };
+    }
+    const votes = await prisma.vote.findMany({
+      where: {
+        ...where,
+        idea: ideaWhere
+      },
+      skip,
+      take: limit,
+      orderBy: {
+        createdAt: sortBy === "oldest" ? "asc" : "desc"
+      },
+      include: {
+        idea: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            imageUrl: true,
+            voteScore: true,
+            status: true,
+            categories: {
+              include: {
+                category: {
+                  select: {
+                    id: true,
+                    name: true,
+                    slug: true
+                  }
+                }
+              }
+            },
+            author: {
+              select: {
+                id: true,
+                name: true,
+                image: true
+              }
+            }
+          }
+        }
+      }
+    });
+    const totalItems = await prisma.vote.count({
+      where: {
+        ...where,
+        idea: ideaWhere
+      }
+    });
+    const stats = await prisma.$transaction([
+      prisma.vote.count({ where: { userId } }),
+      prisma.vote.count({ where: { userId, voteType: "UP" } }),
+      prisma.vote.count({ where: { userId, voteType: "DOWN" } })
+    ]);
+    const formattedVotes = votes.map((vote) => ({
+      id: vote.id,
+      voteType: vote.voteType,
+      createdAt: vote.createdAt,
+      idea: {
+        id: vote.idea.id,
+        title: vote.idea.title,
+        description: vote.idea.description,
+        imageUrl: vote.idea.imageUrl,
+        voteScore: vote.idea.voteScore,
+        status: vote.idea.status,
+        categories: vote.idea.categories.map((c) => ({
+          id: c.category.id,
+          name: c.category.name,
+          slug: c.category.slug
+        })),
+        author: vote.idea.author
+      }
+    }));
+    return {
+      success: true,
+      data: {
+        votes: formattedVotes,
+        stats: {
+          totalVotes: stats[0],
+          upvotes: stats[1],
+          downvotes: stats[2]
+        },
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems,
+          itemsPerPage: limit
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Get user votes error:", error);
+    return { success: false, message: "Failed to fetch votes" };
+  }
+};
+var voteService = {
+  castVote,
+  removeVote,
+  getUserVote,
+  getUserVotes
+};
+
+// src/modules/votes/vote.controller.ts
+var castVote2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { ideaId } = req.params;
+    const { voteType } = req.body;
+    if (!ideaId) {
+      return res.status(400).json({
+        success: false,
+        message: "Idea ID is required"
+      });
+    }
+    if (!voteType || voteType !== "UP" && voteType !== "DOWN") {
+      return res.status(400).json({
+        success: false,
+        message: "Valid vote type (UP or DOWN) is required"
+      });
+    }
+    const result = await voteService.castVote(userId, ideaId, voteType);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+var removeVote2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { ideaId } = req.params;
+    if (!ideaId) {
+      return res.status(400).json({
+        success: false,
+        message: "Idea ID is required"
+      });
+    }
+    const result = await voteService.removeVote(userId, ideaId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+var getUserVote2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { ideaId } = req.params;
+    if (!ideaId) {
+      return res.status(400).json({
+        success: false,
+        message: "Idea ID is required"
+      });
+    }
+    const result = await voteService.getUserVote(userId, ideaId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getUserVotes2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const voteType = req.query.voteType;
+    const sortBy = req.query.sortBy;
+    const search = req.query.search;
+    const category = req.query.category;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const result = await voteService.getUserVotes(userId, {
+      voteType,
+      sortBy,
+      search,
+      category,
+      page,
+      limit
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var voteController = {
+  castVote: castVote2,
+  removeVote: removeVote2,
+  getUserVote: getUserVote2,
+  getUserVotes: getUserVotes2
+};
+
+// src/modules/votes/vote.route.ts
+var router9 = express9.Router();
+router9.use(auth_default(Role.MEMBER, Role.ADMIN));
+router9.get("/user/votes", voteController.getUserVotes);
+router9.post("/:ideaId", voteController.castVote);
+router9.delete("/:ideaId", voteController.removeVote);
+router9.get("/:ideaId", voteController.getUserVote);
+var voteRouter = router9;
+
+// src/modules/profile/member/member-profile.route.ts
+import express10 from "express";
+
+// src/modules/profile/member/member-profile.service.ts
+import bcrypt from "bcryptjs";
+var getProfile = async (userId) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        emailVerified: true,
+        image: true,
+        phone: true,
+        address: true,
+        role: true,
+        accountStatus: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+    return { success: true, data: user };
+  } catch (error) {
+    console.error("Get profile error:", error);
+    return { success: false, message: "Failed to fetch profile" };
+  }
+};
+var updateProfile = async (userId, data) => {
+  try {
+    const updateData = {};
+    if (data.name !== void 0) updateData.name = data.name;
+    if (data.phone !== void 0) updateData.phone = data.phone;
+    if (data.address !== void 0) updateData.address = data.address;
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        emailVerified: true,
+        image: true,
+        phone: true,
+        address: true,
+        role: true,
+        accountStatus: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    return { success: true, data: updatedUser };
+  } catch (error) {
+    console.error("Update profile error:", error);
+    return { success: false, message: "Failed to update profile" };
+  }
+};
+var getStats5 = async (userId) => {
+  try {
+    const userIdeas = await prisma.idea.findMany({
+      where: { authorId: userId },
+      select: {
+        id: true,
+        status: true,
+        voteScore: true,
+        isPaid: true
+      }
+    });
+    const totalIdeas = userIdeas.length;
+    const draftIdeas = userIdeas.filter((idea) => idea.status === "DRAFT").length;
+    const pendingIdeas = userIdeas.filter((idea) => idea.status === "PENDING").length;
+    const approvedIdeas = userIdeas.filter((idea) => idea.status === "APPROVED").length;
+    const rejectedIdeas = userIdeas.filter((idea) => idea.status === "REJECTED").length;
+    const totalUpvotesReceived = userIdeas.reduce((sum, idea) => {
+      return sum + (idea.voteScore > 0 ? idea.voteScore : 0);
+    }, 0);
+    const totalComments = await prisma.comment.count({
+      where: {
+        userId,
+        isDeleted: false
+      }
+    });
+    const totalBookmarks = await prisma.bookmark.count({
+      where: { userId }
+    });
+    const approvalRate = approvedIdeas > 0 ? Math.round(approvedIdeas / (approvedIdeas + rejectedIdeas) * 100) : 0;
+    const stats = {
+      totalIdeas,
+      draftIdeas,
+      pendingIdeas,
+      approvedIdeas,
+      rejectedIdeas,
+      totalUpvotesReceived,
+      totalComments,
+      totalBookmarks,
+      approvalRate
+    };
+    return { success: true, data: stats };
+  } catch (error) {
+    console.error("Get stats error:", error);
+    return { success: false, message: "Failed to fetch stats" };
+  }
+};
+var getActivity = async (userId, limit) => {
+  try {
+    const recentIdeas = await prisma.idea.findMany({
+      where: { authorId: userId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        createdAt: true
+      }
+    });
+    const recentComments = await prisma.comment.findMany({
+      where: {
+        userId,
+        isDeleted: false
+      },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        ideaId: true,
+        idea: {
+          select: { title: true }
+        },
+        createdAt: true
+      }
+    });
+    const recentVotes = await prisma.vote.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        voteType: true,
+        ideaId: true,
+        idea: {
+          select: { title: true }
+        },
+        createdAt: true
+      }
+    });
+    const activities = [
+      ...recentIdeas.map((idea) => ({
+        id: `idea-${idea.id}`,
+        type: idea.status === "PENDING" ? "SUBMIT_IDEA" : idea.status === "APPROVED" ? "APPROVE_IDEA" : idea.status === "REJECTED" ? "REJECT_IDEA" : "SUBMIT_IDEA",
+        message: idea.status === "PENDING" ? `You submitted "${idea.title}" for review` : idea.status === "APPROVED" ? `Your idea "${idea.title}" was approved!` : idea.status === "REJECTED" ? `Your idea "${idea.title}" was rejected` : `You created "${idea.title}"`,
+        ideaId: idea.id,
+        ideaTitle: idea.title,
+        createdAt: idea.createdAt
+      })),
+      ...recentComments.map((comment) => ({
+        id: `comment-${comment.id}`,
+        type: "NEW_COMMENT",
+        message: `You commented on "${comment.idea.title}"`,
+        ideaId: comment.ideaId,
+        ideaTitle: comment.idea.title,
+        createdAt: comment.createdAt
+      })),
+      ...recentVotes.map((vote) => ({
+        id: `vote-${vote.id}`,
+        type: "VOTE",
+        message: `You ${vote.voteType === "UP" ? "upvoted" : "downvoted"} "${vote.idea.title}"`,
+        ideaId: vote.ideaId,
+        ideaTitle: vote.idea.title,
+        createdAt: vote.createdAt
+      }))
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, limit);
+    return { success: true, data: activities };
+  } catch (error) {
+    console.error("Get activity error:", error);
+    return { success: false, message: "Failed to fetch activity" };
+  }
+};
+var changePassword = async (userId, data) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        accounts: {
+          where: { providerId: "email" },
+          take: 1
+        }
+      }
+    });
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+    const account = user.accounts[0];
+    if (!account || !account.password) {
+      return { success: false, message: "No password set for this account" };
+    }
+    const isValidPassword = await bcrypt.compare(data.currentPassword, account.password);
+    if (!isValidPassword) {
+      return { success: false, message: "Current password is incorrect" };
+    }
+    const hashedPassword = await bcrypt.hash(data.newPassword, 10);
+    await prisma.account.update({
+      where: { id: account.id },
+      data: { password: hashedPassword }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Change password error:", error);
+    return { success: false, message: "Failed to change password" };
+  }
+};
+var updateNewsletter = async (userId, isSubscribed) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true }
+    });
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+    if (isSubscribed) {
+      await prisma.newsletter.upsert({
+        where: { email: user.email },
+        update: {
+          isSubscribed: true,
+          unsubscribedAt: null
+        },
+        create: {
+          email: user.email,
+          isSubscribed: true,
+          userId
+        }
+      });
+    } else {
+      await prisma.newsletter.update({
+        where: { email: user.email },
+        data: {
+          isSubscribed: false,
+          unsubscribedAt: /* @__PURE__ */ new Date()
+        }
+      });
+    }
+    return { success: true };
+  } catch (error) {
+    console.error("Update newsletter error:", error);
+    return { success: false, message: "Failed to update newsletter subscription" };
+  }
+};
+var deleteAccount = async (userId) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+    await prisma.user.delete({
+      where: { id: userId }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Delete account error:", error);
+    return { success: false, message: "Failed to delete account" };
+  }
+};
+var memberProfileService = {
+  getProfile,
+  updateProfile,
+  getStats: getStats5,
+  getActivity,
+  changePassword,
+  updateNewsletter,
+  deleteAccount
+};
+
+// src/modules/profile/member/member-profile.controller.ts
+var getProfile2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const result = await memberProfileService.getProfile(userId);
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateProfile2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { name, phone, address } = req.body;
+    const result = await memberProfileService.updateProfile(userId, {
+      name,
+      phone,
+      address
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data,
+      message: "Profile updated successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getStats6 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const result = await memberProfileService.getStats(userId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getActivity2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const limit = parseInt(req.query.limit) || 10;
+    const result = await memberProfileService.getActivity(userId, limit);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var changePassword2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "All password fields are required"
+      });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New passwords do not match"
+      });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters"
+      });
+    }
+    const result = await memberProfileService.changePassword(userId, {
+      currentPassword,
+      newPassword
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateNewsletter2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { isSubscribed } = req.body;
+    if (typeof isSubscribed !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "isSubscribed must be a boolean value"
+      });
+    }
+    const result = await memberProfileService.updateNewsletter(userId, isSubscribed);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: isSubscribed ? "Subscribed to newsletter" : "Unsubscribed from newsletter"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var deleteAccount2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const result = await memberProfileService.deleteAccount(userId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.clearCookie("better-auth");
+    return res.status(200).json({
+      success: true,
+      message: "Account deleted successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var memberProfileController = {
+  getProfile: getProfile2,
+  updateProfile: updateProfile2,
+  getStats: getStats6,
+  getActivity: getActivity2,
+  changePassword: changePassword2,
+  updateNewsletter: updateNewsletter2,
+  deleteAccount: deleteAccount2
+};
+
+// src/modules/profile/member/member-profile.route.ts
+var router10 = express10.Router();
+router10.use(auth_default(Role.MEMBER));
+router10.get("/profile", memberProfileController.getProfile);
+router10.patch("/profile", memberProfileController.updateProfile);
+router10.get("/stats", memberProfileController.getStats);
+router10.get("/activity", memberProfileController.getActivity);
+router10.post("/change-password", memberProfileController.changePassword);
+router10.patch("/newsletter", memberProfileController.updateNewsletter);
+router10.delete("/account", memberProfileController.deleteAccount);
+var memberProfileRouter = router10;
+
+// src/modules/settings/admin/admin-settings.route.ts
+import express11 from "express";
+
+// src/modules/settings/admin/admin-settings.service.ts
+import bcrypt2 from "bcryptjs";
+var getProfile3 = async (adminId) => {
+  try {
+    const admin = await prisma.user.findUnique({
+      where: { id: adminId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        role: true,
+        accountStatus: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    if (!admin) {
+      return { success: false, message: "Admin not found" };
+    }
+    return { success: true, data: admin };
+  } catch (error) {
+    console.error("Get admin profile error:", error);
+    return { success: false, message: "Failed to fetch profile" };
+  }
+};
+var updateProfile3 = async (adminId, data) => {
+  try {
+    const updateData = {};
+    if (data.name !== void 0) updateData.name = data.name;
+    if (data.image !== void 0) updateData.image = data.image;
+    const updatedAdmin = await prisma.user.update({
+      where: { id: adminId },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        image: true,
+        role: true,
+        accountStatus: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    return { success: true, data: updatedAdmin };
+  } catch (error) {
+    console.error("Update admin profile error:", error);
+    return { success: false, message: "Failed to update profile" };
+  }
+};
+var changePassword3 = async (adminId, data) => {
+  try {
+    const admin = await prisma.user.findUnique({
+      where: { id: adminId },
+      include: {
+        accounts: {
+          where: { providerId: "email" },
+          take: 1
+        }
+      }
+    });
+    if (!admin) {
+      return { success: false, message: "Admin not found" };
+    }
+    const account = admin.accounts[0];
+    if (!account || !account.password) {
+      return { success: false, message: "No password set for this account" };
+    }
+    const isValidPassword = await bcrypt2.compare(data.currentPassword, account.password);
+    if (!isValidPassword) {
+      return { success: false, message: "Current password is incorrect" };
+    }
+    const hashedPassword = await bcrypt2.hash(data.newPassword, 10);
+    await prisma.account.update({
+      where: { id: account.id },
+      data: { password: hashedPassword }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Change password error:", error);
+    return { success: false, message: "Failed to change password" };
+  }
+};
+var getNotificationPreferences = async (adminId) => {
+  try {
+    const defaultPreferences = {
+      newIdeaSubmissions: true,
+      pendingReviewReminders: true,
+      reportedContent: true,
+      weeklySummary: false,
+      systemAnnouncements: true
+    };
+    return { success: true, data: defaultPreferences };
+  } catch (error) {
+    console.error("Get notification preferences error:", error);
+    return { success: false, message: "Failed to fetch preferences" };
+  }
+};
+var updateNotificationPreferences = async (adminId, preferences) => {
+  try {
+    return { success: true };
+  } catch (error) {
+    console.error("Update notification preferences error:", error);
+    return { success: false, message: "Failed to update preferences" };
+  }
+};
+var getSessions = async (adminId, currentToken) => {
+  try {
+    const sessions = await prisma.session.findMany({
+      where: { userId: adminId },
+      orderBy: { createdAt: "desc" }
+    });
+    const formattedSessions = sessions.map((session) => ({
+      id: session.id,
+      userAgent: session.userAgent || "Unknown Device",
+      ipAddress: session.ipAddress || "Unknown IP",
+      createdAt: session.createdAt,
+      expiresAt: session.expiresAt,
+      isCurrent: session.token === currentToken
+    }));
+    return { success: true, data: formattedSessions };
+  } catch (error) {
+    console.error("Get sessions error:", error);
+    return { success: false, message: "Failed to fetch sessions" };
+  }
+};
+var revokeSession = async (adminId, sessionId) => {
+  try {
+    const session = await prisma.session.findFirst({
+      where: { id: sessionId, userId: adminId }
+    });
+    if (!session) {
+      return { success: false, message: "Session not found" };
+    }
+    await prisma.session.delete({
+      where: { id: sessionId }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Revoke session error:", error);
+    return { success: false, message: "Failed to revoke session" };
+  }
+};
+var revokeAllSessions = async (adminId, currentToken) => {
+  try {
+    await prisma.session.deleteMany({
+      where: {
+        userId: adminId,
+        token: { not: currentToken }
+      }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Revoke all sessions error:", error);
+    return { success: false, message: "Failed to revoke sessions" };
+  }
+};
+var getActivityLog = async (adminId, limit, page) => {
+  try {
+    const skip = (page - 1) * limit;
+    const activities = await prisma.activityLog.findMany({
+      where: { userId: adminId },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit
+    });
+    const total = await prisma.activityLog.count({
+      where: { userId: adminId }
+    });
+    const formattedActivities = activities.map((activity) => ({
+      id: activity.id,
+      action: activity.action,
+      details: activity.details,
+      ipAddress: activity.ipAddress,
+      createdAt: activity.createdAt
+    }));
+    return {
+      success: true,
+      data: {
+        activities: formattedActivities,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: limit
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Get activity log error:", error);
+    return { success: false, message: "Failed to fetch activity log" };
+  }
+};
+var clearCache = async () => {
+  try {
+    return { success: true };
+  } catch (error) {
+    console.error("Clear cache error:", error);
+    return { success: false, message: "Failed to clear cache" };
+  }
+};
+var adminSettingsService = {
+  getProfile: getProfile3,
+  updateProfile: updateProfile3,
+  changePassword: changePassword3,
+  getNotificationPreferences,
+  updateNotificationPreferences,
+  getSessions,
+  revokeSession,
+  revokeAllSessions,
+  getActivityLog,
+  clearCache
+};
+
+// src/modules/settings/admin/admin-settings.controller.ts
+var getProfile4 = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const result = await adminSettingsService.getProfile(adminId);
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateProfile4 = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const { name, image } = req.body;
+    const result = await adminSettingsService.updateProfile(adminId, { name, image });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data,
+      message: "Profile updated successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var changePassword4 = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const { currentPassword, newPassword, confirmPassword } = req.body;
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "All password fields are required"
+      });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New passwords do not match"
+      });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters"
+      });
+    }
+    const result = await adminSettingsService.changePassword(adminId, {
+      currentPassword,
+      newPassword
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Password changed successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getNotificationPreferences2 = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const result = await adminSettingsService.getNotificationPreferences(adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateNotificationPreferences2 = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const { newIdeaSubmissions, pendingReviewReminders, reportedContent, weeklySummary, systemAnnouncements } = req.body;
+    const result = await adminSettingsService.updateNotificationPreferences(adminId, {
+      newIdeaSubmissions,
+      pendingReviewReminders,
+      reportedContent,
+      weeklySummary,
+      systemAnnouncements
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Notification preferences updated successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getSessions2 = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const token = req.headers.authorization?.replace("Bearer ", "") || "";
+    const result = await adminSettingsService.getSessions(adminId, token);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var revokeSession2 = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const { sessionId } = req.params;
+    const result = await adminSettingsService.revokeSession(adminId, sessionId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Session revoked successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var revokeAllSessions2 = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const currentToken = req.headers.authorization?.replace("Bearer ", "") || "";
+    const result = await adminSettingsService.revokeAllSessions(adminId, currentToken);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "All other sessions revoked successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getActivityLog2 = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const limit = parseInt(req.query.limit) || 20;
+    const page = parseInt(req.query.page) || 1;
+    const result = await adminSettingsService.getActivityLog(adminId, limit, page);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var clearCache2 = async (req, res, next) => {
+  try {
+    const result = await adminSettingsService.clearCache();
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Cache cleared successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var adminSettingsController = {
+  getProfile: getProfile4,
+  updateProfile: updateProfile4,
+  changePassword: changePassword4,
+  getNotificationPreferences: getNotificationPreferences2,
+  updateNotificationPreferences: updateNotificationPreferences2,
+  getSessions: getSessions2,
+  revokeSession: revokeSession2,
+  revokeAllSessions: revokeAllSessions2,
+  getActivityLog: getActivityLog2,
+  clearCache: clearCache2
+};
+
+// src/modules/settings/admin/admin-settings.route.ts
+var router11 = express11.Router();
+router11.use(auth_default(Role.ADMIN));
+router11.get("/profile", adminSettingsController.getProfile);
+router11.patch("/profile", adminSettingsController.updateProfile);
+router11.post("/change-password", adminSettingsController.changePassword);
+router11.get("/notifications", adminSettingsController.getNotificationPreferences);
+router11.patch("/notifications", adminSettingsController.updateNotificationPreferences);
+router11.get("/sessions", adminSettingsController.getSessions);
+router11.delete("/sessions", adminSettingsController.revokeAllSessions);
+router11.delete("/sessions/:sessionId", adminSettingsController.revokeSession);
+router11.get("/activity", adminSettingsController.getActivityLog);
+router11.post("/clear-cache", adminSettingsController.clearCache);
+var adminSettingsRouter = router11;
+
+// src/modules/users/user-management.route.ts
+import express12 from "express";
+
+// src/modules/users/user-management.service.ts
+var getAllUsers = async (params) => {
+  try {
+    const { page, limit, search, role, status, verified, sort } = params;
+    const skip = (page - 1) * limit;
+    const where = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } }
+      ];
+    }
+    if (role && role !== "all") {
+      where.role = role;
+    }
+    if (status && status !== "all") {
+      where.accountStatus = status;
+    }
+    if (verified === "verified") {
+      where.emailVerified = true;
+    } else if (verified === "unverified") {
+      where.emailVerified = false;
+    }
+    let orderBy = {};
+    switch (sort) {
+      case "oldest":
+        orderBy = { createdAt: "asc" };
+        break;
+      case "name_asc":
+        orderBy = { name: "asc" };
+        break;
+      case "name_desc":
+        orderBy = { name: "desc" };
+        break;
+      case "most_ideas":
+        orderBy = { ideas: { _count: "desc" } };
+        break;
+      case "most_comments":
+        orderBy = { comments: { _count: "desc" } };
+        break;
+      default:
+        orderBy = { createdAt: "desc" };
+    }
+    const users = await prisma.user.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        emailVerified: true,
+        image: true,
+        role: true,
+        accountStatus: true,
+        phone: true,
+        address: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            ideas: true,
+            comments: true,
+            votes: true
+          }
+        }
+      }
+    });
+    const totalItems = await prisma.user.count({ where });
+    const stats = await prisma.$transaction([
+      prisma.user.count(),
+      prisma.user.count({ where: { accountStatus: "ACTIVE" } }),
+      prisma.user.count({ where: { accountStatus: "SUSPENDED" } }),
+      prisma.user.count({ where: { accountStatus: "BANNED" } }),
+      prisma.user.count({ where: { role: "ADMIN" } }),
+      prisma.user.count({ where: { role: "MEMBER" } }),
+      prisma.user.count({ where: { emailVerified: true } }),
+      prisma.user.count({ where: { emailVerified: false } })
+    ]);
+    const startOfMonth = /* @__PURE__ */ new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+    const newUsersThisMonth = await prisma.user.count({
+      where: {
+        createdAt: { gte: startOfMonth }
+      }
+    });
+    const startOfLastMonth = /* @__PURE__ */ new Date();
+    startOfLastMonth.setMonth(startOfLastMonth.getMonth() - 1);
+    startOfLastMonth.setDate(1);
+    startOfLastMonth.setHours(0, 0, 0, 0);
+    const endOfLastMonth = /* @__PURE__ */ new Date();
+    endOfLastMonth.setDate(0);
+    endOfLastMonth.setHours(23, 59, 59, 999);
+    const lastMonthNewUsers = await prisma.user.count({
+      where: {
+        createdAt: {
+          gte: startOfLastMonth,
+          lte: endOfLastMonth
+        }
+      }
+    });
+    const newUsersTrend = lastMonthNewUsers === 0 ? 100 : Math.round((newUsersThisMonth - lastMonthNewUsers) / lastMonthNewUsers * 100);
+    return {
+      success: true,
+      data: {
+        users,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems,
+          itemsPerPage: limit
+        },
+        stats: {
+          totalUsers: stats[0],
+          activeUsers: stats[1],
+          suspendedUsers: stats[2],
+          bannedUsers: stats[3],
+          adminUsers: stats[4],
+          memberUsers: stats[5],
+          verifiedEmails: stats[6],
+          unverifiedEmails: stats[7],
+          newUsersThisMonth,
+          newUsersTrend
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Get all users error:", error);
+    return { success: false, message: "Failed to fetch users" };
+  }
+};
+var getUserDetails = async (userId) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        emailVerified: true,
+        image: true,
+        role: true,
+        accountStatus: true,
+        phone: true,
+        address: true,
+        createdAt: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            ideas: true,
+            comments: true,
+            votes: true,
+            bookmarks: true
+          }
+        },
+        // Get last active session
+        sessions: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          select: { createdAt: true }
+        }
+      }
+    });
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+    const recentActivities = await prisma.activityLog.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      take: 10
+    });
+    return {
+      success: true,
+      data: {
+        ...user,
+        lastActive: user.sessions[0]?.createdAt || user.createdAt,
+        recentActivities
+      }
+    };
+  } catch (error) {
+    console.error("Get user details error:", error);
+    return { success: false, message: "Failed to fetch user details" };
+  }
+};
+var banUser = async (userId, adminId) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+    if (user.role === "ADMIN") {
+      return { success: false, message: "Cannot ban another admin" };
+    }
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { accountStatus: "BANNED" }
+    });
+    await prisma.activityLog.create({
+      data: {
+        action: "ADMIN_ACTION",
+        userId: adminId,
+        details: {
+          action: "BAN_USER",
+          targetUserId: userId,
+          targetUserEmail: user.email
+        },
+        ipAddress: "",
+        userAgent: ""
+      }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Ban user error:", error);
+    return { success: false, message: "Failed to ban user" };
+  }
+};
+var unbanUser = async (userId, adminId) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+    await prisma.user.update({
+      where: { id: userId },
+      data: { accountStatus: "ACTIVE" }
+    });
+    await prisma.activityLog.create({
+      data: {
+        action: "ADMIN_ACTION",
+        userId: adminId,
+        details: {
+          action: "UNBAN_USER",
+          targetUserId: userId,
+          targetUserEmail: user.email
+        },
+        ipAddress: "",
+        userAgent: ""
+      }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Unban user error:", error);
+    return { success: false, message: "Failed to unban user" };
+  }
+};
+var suspendUser = async (userId, adminId) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+    if (user.role === "ADMIN") {
+      return { success: false, message: "Cannot suspend another admin" };
+    }
+    await prisma.user.update({
+      where: { id: userId },
+      data: { accountStatus: "SUSPENDED" }
+    });
+    await prisma.activityLog.create({
+      data: {
+        action: "ADMIN_ACTION",
+        userId: adminId,
+        details: {
+          action: "SUSPEND_USER",
+          targetUserId: userId,
+          targetUserEmail: user.email
+        },
+        ipAddress: "",
+        userAgent: ""
+      }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Suspend user error:", error);
+    return { success: false, message: "Failed to suspend user" };
+  }
+};
+var activateUser = async (userId, adminId) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+    await prisma.user.update({
+      where: { id: userId },
+      data: { accountStatus: "ACTIVE" }
+    });
+    await prisma.activityLog.create({
+      data: {
+        action: "ADMIN_ACTION",
+        userId: adminId,
+        details: {
+          action: "ACTIVATE_USER",
+          targetUserId: userId,
+          targetUserEmail: user.email
+        },
+        ipAddress: "",
+        userAgent: ""
+      }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Activate user error:", error);
+    return { success: false, message: "Failed to activate user" };
+  }
+};
+var changeUserRole = async (userId, newRole, adminId) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+    if (userId === adminId) {
+      return { success: false, message: "You cannot change your own role" };
+    }
+    await prisma.user.update({
+      where: { id: userId },
+      data: { role: newRole }
+    });
+    await prisma.activityLog.create({
+      data: {
+        action: "ADMIN_ACTION",
+        userId: adminId,
+        details: {
+          action: "CHANGE_ROLE",
+          targetUserId: userId,
+          targetUserEmail: user.email,
+          newRole,
+          oldRole: user.role
+        },
+        ipAddress: "",
+        userAgent: ""
+      }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Change user role error:", error);
+    return { success: false, message: "Failed to change user role" };
+  }
+};
+var deleteUser = async (userId, adminId) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+    await prisma.user.delete({
+      where: { id: userId }
+    });
+    await prisma.activityLog.create({
+      data: {
+        action: "ADMIN_ACTION",
+        userId: adminId,
+        details: {
+          action: "DELETE_USER",
+          targetUserId: userId,
+          targetUserEmail: user.email
+        },
+        ipAddress: "",
+        userAgent: ""
+      }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Delete user error:", error);
+    return { success: false, message: "Failed to delete user" };
+  }
+};
+var bulkAction = async (action, userIds, adminId) => {
+  try {
+    const results = await Promise.all(
+      userIds.map(async (userId) => {
+        switch (action) {
+          case "ban":
+            return await banUser(userId, adminId);
+          case "unban":
+            return await unbanUser(userId, adminId);
+          case "suspend":
+            return await suspendUser(userId, adminId);
+          case "activate":
+            return await activateUser(userId, adminId);
+          case "delete":
+            return await deleteUser(userId, adminId);
+          default:
+            return { success: false };
+        }
+      })
+    );
+    const successful = results.filter((r) => r.success).length;
+    const failed = results.filter((r) => !r.success).length;
+    return {
+      success: true,
+      message: `${successful} user(s) ${action}ed successfully${failed > 0 ? `, ${failed} failed` : ""}`
+    };
+  } catch (error) {
+    console.error("Bulk action error:", error);
+    return { success: false, message: "Failed to perform bulk action" };
+  }
+};
+var exportUsers = async (params) => {
+  try {
+    const { search, role, status, verified } = params;
+    const where = {};
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: "insensitive" } },
+        { email: { contains: search, mode: "insensitive" } }
+      ];
+    }
+    if (role && role !== "all") {
+      where.role = role;
+    }
+    if (status && status !== "all") {
+      where.accountStatus = status;
+    }
+    if (verified === "verified") {
+      where.emailVerified = true;
+    } else if (verified === "unverified") {
+      where.emailVerified = false;
+    }
+    const users = await prisma.user.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      select: {
+        name: true,
+        email: true,
+        role: true,
+        accountStatus: true,
+        emailVerified: true,
+        createdAt: true
+      }
+    });
+    const headers = ["Name", "Email", "Role", "Status", "Email Verified", "Joined Date"];
+    const csvRows = [headers];
+    for (const user of users) {
+      csvRows.push([
+        user.name,
+        user.email,
+        user.role,
+        user.accountStatus,
+        user.emailVerified ? "Yes" : "No",
+        new Date(user.createdAt).toLocaleDateString()
+      ]);
+    }
+    const csvContent = csvRows.map((row) => row.join(",")).join("\n");
+    return { success: true, data: csvContent };
+  } catch (error) {
+    console.error("Export users error:", error);
+    return { success: false, message: "Failed to export users" };
+  }
+};
+var userManagementService = {
+  getAllUsers,
+  getUserDetails,
+  banUser,
+  unbanUser,
+  suspendUser,
+  activateUser,
+  changeUserRole,
+  deleteUser,
+  bulkAction,
+  exportUsers
+};
+
+// src/modules/users/user-management.controller.ts
+var getAllUsers2 = async (req, res, next) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15;
+    const search = req.query.search;
+    const role = req.query.role;
+    const status = req.query.status;
+    const verified = req.query.verified;
+    const sort = req.query.sort;
+    const result = await userManagementService.getAllUsers({
+      page,
+      limit,
+      search,
+      role,
+      status,
+      verified,
+      sort
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getUserDetails2 = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required"
+      });
+    }
+    const result = await userManagementService.getUserDetails(userId);
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var banUser2 = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const adminId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required"
+      });
+    }
+    const result = await userManagementService.banUser(userId, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "User banned successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var unbanUser2 = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const adminId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required"
+      });
+    }
+    const result = await userManagementService.unbanUser(userId, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "User unbanned successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var suspendUser2 = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const adminId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required"
+      });
+    }
+    const result = await userManagementService.suspendUser(userId, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "User suspended successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var activateUser2 = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const adminId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required"
+      });
+    }
+    const result = await userManagementService.activateUser(userId, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "User activated successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var changeUserRole2 = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { role } = req.body;
+    const adminId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required"
+      });
+    }
+    if (!role || !["MEMBER", "ADMIN"].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid role (MEMBER or ADMIN) is required"
+      });
+    }
+    const result = await userManagementService.changeUserRole(userId, role, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: `User role changed to ${role} successfully`
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var deleteUser2 = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const adminId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: "User ID is required"
+      });
+    }
+    if (userId === adminId) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot delete your own account"
+      });
+    }
+    const result = await userManagementService.deleteUser(userId, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "User deleted successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var bulkAction2 = async (req, res, next) => {
+  try {
+    const { action, userIds } = req.body;
+    const adminId = req.user.id;
+    if (!action || !userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Action and userIds array are required"
+      });
+    }
+    const validActions = ["ban", "unban", "suspend", "activate", "delete"];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid action. Valid actions: ${validActions.join(", ")}`
+      });
+    }
+    if (action === "delete" && userIds.includes(adminId)) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot delete your own account"
+      });
+    }
+    const result = await userManagementService.bulkAction(action, userIds, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: result.message
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var exportUsers2 = async (req, res, next) => {
+  try {
+    const format = req.query.format || "csv";
+    const search = req.query.search;
+    const role = req.query.role;
+    const status = req.query.status;
+    const verified = req.query.verified;
+    const result = await userManagementService.exportUsers({
+      format,
+      search,
+      role,
+      status,
+      verified
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader("Content-Disposition", `attachment; filename=users_export_${Date.now()}.csv`);
+    return res.send(result.data);
+  } catch (error) {
+    next(error);
+  }
+};
+var userManagementController = {
+  getAllUsers: getAllUsers2,
+  getUserDetails: getUserDetails2,
+  banUser: banUser2,
+  unbanUser: unbanUser2,
+  suspendUser: suspendUser2,
+  activateUser: activateUser2,
+  changeUserRole: changeUserRole2,
+  deleteUser: deleteUser2,
+  bulkAction: bulkAction2,
+  exportUsers: exportUsers2
+};
+
+// src/modules/users/user-management.route.ts
+var router12 = express12.Router();
+router12.use(auth_default(Role.ADMIN));
+router12.get("/", userManagementController.getAllUsers);
+router12.get("/export", userManagementController.exportUsers);
+router12.post("/bulk", userManagementController.bulkAction);
+router12.get("/:userId", userManagementController.getUserDetails);
+router12.patch("/:userId/role", userManagementController.changeUserRole);
+router12.post("/:userId/ban", userManagementController.banUser);
+router12.post("/:userId/unban", userManagementController.unbanUser);
+router12.post("/:userId/suspend", userManagementController.suspendUser);
+router12.post("/:userId/activate", userManagementController.activateUser);
+router12.delete("/:userId", userManagementController.deleteUser);
+var userManagementRouter = router12;
+
+// src/modules/payment/payment.route.ts
+import express13 from "express";
+
+// src/modules/payment/payment.service.ts
+import Stripe from "stripe";
+var stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+var createPaymentIntent = async (data) => {
+  try {
+    const { amount, userId, ideaId, ideaTitle, userEmail, userName } = data;
+    const payment = await prisma.payment.create({
+      data: {
+        amount,
+        status: PaymentStatus.PENDING,
+        paymentMethod: PaymentMethod.STRIPE,
+        userId,
+        ideaId,
+        metadata: {
+          ideaTitle,
+          userName,
+          userEmail
+        }
+      }
+    });
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(amount * 100),
+      // Convert to cents
+      currency: "usd",
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        paymentId: payment.id,
+        ideaId,
+        userId,
+        ideaTitle
+      },
+      receipt_email: userEmail,
+      description: `Payment for idea: ${ideaTitle}`
+    });
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        stripePaymentIntentId: paymentIntent.id,
+        transactionId: paymentIntent.id
+      }
+    });
+    return {
+      success: true,
+      data: {
+        clientSecret: paymentIntent.client_secret,
+        paymentId: payment.id
+      }
+    };
+  } catch (error) {
+    return { success: false, message: "Failed to create payment intent" };
+  }
+};
+var handleStripeWebhookEvent = async (event) => {
+  const existingPayment = await prisma.payment.findFirst({
+    where: {
+      stripeEventId: event.id
+    }
+  });
+  if (existingPayment) {
+    return { message: `Event ${event.id} already processed. Skipping` };
+  }
+  switch (event.type) {
+    case "payment_intent.succeeded": {
+      try {
+        const paymentIntent = event.data.object;
+        const paymentId = paymentIntent.metadata?.paymentId;
+        const ideaId = paymentIntent.metadata?.ideaId;
+        if (!paymentId || !ideaId) {
+          return { message: "Missing paymentId or ideaId in metadata" };
+        }
+        const payment = await prisma.payment.findUnique({
+          where: { id: paymentId },
+          include: { idea: true }
+        });
+        if (!payment) {
+          return { message: `Payment with id ${paymentId} not found` };
+        }
+        let receiptUrl = null;
+        if (paymentIntent.latest_charge) {
+          const charge = await stripe.charges.retrieve(paymentIntent.latest_charge);
+          receiptUrl = charge.receipt_url;
+        }
+        await prisma.$transaction(async (tx) => {
+          await tx.payment.update({
+            where: { id: paymentId },
+            data: {
+              status: PaymentStatus.COMPLETED,
+              stripeEventId: event.id,
+              paidAt: /* @__PURE__ */ new Date(),
+              transactionId: paymentIntent.id,
+              ...receiptUrl && { receiptUrl }
+            }
+          });
+        });
+      } catch (error) {
+        throw error;
+      }
+      break;
+    }
+    case "payment_intent.payment_failed": {
+      const paymentIntent = event.data.object;
+      const paymentId = paymentIntent.metadata?.paymentId;
+      if (!paymentId) {
+        return { message: "Missing paymentId in metadata" };
+      }
+      const existingPayment2 = await prisma.payment.findUnique({
+        where: { id: paymentId },
+        select: { metadata: true }
+      });
+      const existingMetadata = existingPayment2?.metadata || {};
+      const updatedMetadata = {
+        ...existingMetadata,
+        failureMessage: paymentIntent.last_payment_error?.message,
+        failedAt: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      await prisma.payment.update({
+        where: { id: paymentId },
+        data: {
+          status: PaymentStatus.FAILED,
+          stripeEventId: event.id,
+          metadata: updatedMetadata
+        }
+      });
+      break;
+    }
+    case "charge.refunded": {
+      const charge = event.data.object;
+      const paymentIntentId = charge.payment_intent;
+      const payment = await prisma.payment.findFirst({
+        where: { stripePaymentIntentId: paymentIntentId }
+      });
+      if (!payment) {
+        return { message: `Payment not found` };
+      }
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: PaymentStatus.REFUNDED,
+          stripeEventId: event.id
+        }
+      });
+      break;
+    }
+    default:
+      console.log(`Unhandled event type ${event.type}`);
+  }
+  return { message: `Webhook Event ${event.id} processed successfully` };
+};
+var checkPaymentStatus = async (paymentId) => {
+  try {
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId }
+    });
+    if (!payment) {
+      return { success: false, message: "Payment not found" };
+    }
+    return {
+      success: true,
+      data: {
+        status: payment.status,
+        paidAt: payment.paidAt,
+        receiptUrl: payment.receiptUrl
+      }
+    };
+  } catch (error) {
+    return { success: false, message: "Failed to check payment status" };
+  }
+};
+var hasUserPaidForIdea = async (userId, ideaId) => {
+  try {
+    const payment = await prisma.payment.findFirst({
+      where: {
+        userId,
+        ideaId,
+        status: PaymentStatus.COMPLETED
+      }
+    });
+    return {
+      success: true,
+      data: !!payment
+    };
+  } catch (error) {
+    return { success: false, message: "Failed to check payment status" };
+  }
+};
+var getPaymentsByUser = async (userId, page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+    const payments = await prisma.payment.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take: limit,
+      include: {
+        idea: {
+          select: {
+            id: true,
+            title: true,
+            imageUrl: true
+          }
+        }
+      }
+    });
+    const total = await prisma.payment.count({ where: { userId } });
+    return {
+      success: true,
+      data: {
+        payments,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: limit
+        }
+      }
+    };
+  } catch (error) {
+    return { success: false, message: "Failed to fetch payments" };
+  }
+};
+var refundPayment = async (paymentId, adminId) => {
+  try {
+    const payment = await prisma.payment.findUnique({
+      where: { id: paymentId }
+    });
+    if (!payment) {
+      return { success: false, message: "Payment not found" };
+    }
+    if (payment.status !== PaymentStatus.COMPLETED) {
+      return { success: false, message: "Only completed payments can be refunded" };
+    }
+    if (!payment.stripePaymentIntentId) {
+      return { success: false, message: "No Stripe payment intent found" };
+    }
+    const refund = await stripe.refunds.create({
+      payment_intent: payment.stripePaymentIntentId
+    });
+    await prisma.payment.update({
+      where: { id: paymentId },
+      data: {
+        status: PaymentStatus.REFUNDED,
+        metadata: {
+          ...payment.metadata,
+          refundId: refund.id,
+          refundedBy: adminId,
+          refundedAt: (/* @__PURE__ */ new Date()).toISOString()
+        }
+      }
+    });
+    return { success: true, message: "Payment refunded successfully" };
+  } catch (error) {
+    return { success: false, message: "Failed to process refund" };
+  }
+};
+var PaymentService = {
+  createPaymentIntent,
+  handleStripeWebhookEvent,
+  checkPaymentStatus,
+  hasUserPaidForIdea,
+  getPaymentsByUser,
+  refundPayment
+};
+
+// src/config/stripe.config.ts
+import Stripe2 from "stripe";
+var stripe2 = new Stripe2(process.env.STRIPE_SECRET_KEY);
+
+// src/modules/payment/payment.controller.ts
+var createPaymentIntent2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+    const userName = req.user.name;
+    const { ideaId, amount, ideaTitle } = req.body;
+    if (!ideaId || !amount || !ideaTitle) {
+      return res.status(400).json({
+        success: false,
+        message: "Idea ID, amount, and idea title are required"
+      });
+    }
+    const result = await PaymentService.createPaymentIntent({
+      amount,
+      userId,
+      ideaId,
+      ideaTitle,
+      userEmail,
+      userName
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var handleWebhook = async (req, res, next) => {
+  try {
+    const sig = req.headers["stripe-signature"];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    let event;
+    try {
+      event = stripe2.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: "Invalid signature" });
+    }
+    try {
+      const result = await PaymentService.handleStripeWebhookEvent(event);
+      return res.status(200).json(result);
+    } catch (error) {
+      return res.status(200).json({ success: false, message: "Processing error but acknowledged" });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+var checkPaymentStatus2 = async (req, res, next) => {
+  try {
+    const { paymentId } = req.params;
+    const result = await PaymentService.checkPaymentStatus(paymentId);
+    if (!result.success) {
+      return res.status(404).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var checkUserPaidForIdea = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { ideaId } = req.params;
+    const result = await PaymentService.hasUserPaidForIdea(userId, ideaId);
+    return res.status(200).json({
+      success: true,
+      data: { hasPaid: result.data }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getUserPayments = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const result = await PaymentService.getPaymentsByUser(userId, page, limit);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var refundPayment2 = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const { paymentId } = req.params;
+    const result = await PaymentService.refundPayment(paymentId, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+var PaymentController = {
+  createPaymentIntent: createPaymentIntent2,
+  handleWebhook,
+  checkPaymentStatus: checkPaymentStatus2,
+  checkUserPaidForIdea,
+  getUserPayments,
+  refundPayment: refundPayment2
+};
+
+// src/modules/payment/payment.route.ts
+var router13 = express13.Router();
+router13.post("/webhook", express13.raw({ type: "application/json" }), PaymentController.handleWebhook);
+router13.post("/create-payment-intent", auth_default(Role.MEMBER), PaymentController.createPaymentIntent);
+router13.get("/status/:paymentId", auth_default(Role.MEMBER), PaymentController.checkPaymentStatus);
+router13.get("/check-paid/:ideaId", auth_default(Role.MEMBER), PaymentController.checkUserPaidForIdea);
+router13.get("/my-payments", auth_default(Role.MEMBER), PaymentController.getUserPayments);
+router13.post("/refund/:paymentId", auth_default(Role.ADMIN), PaymentController.refundPayment);
+var paymentRouter = router13;
+
+// src/middlewares/optionalAuth.ts
+var betterAuth2;
+var loadAuth2 = async () => {
+  if (!betterAuth2) {
+    const authModule = await import("./auth-NZDB23BW.js");
+    betterAuth2 = await authModule.auth;
+  }
+  return betterAuth2;
+};
+var optionalAuth = async (req, res, next) => {
+  try {
+    const authInstance = await loadAuth2();
+    const session = await authInstance.api.getSession({
+      headers: req.headers
+    });
+    if (session) {
+      const userFromDb = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { accountStatus: true }
+      });
+      req.user = {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        role: session.user.role,
+        emailVerified: session.user.emailVerified,
+        accountStatus: userFromDb?.accountStatus || "ACTIVE"
+      };
+    }
+    next();
+  } catch (error) {
+    next();
+  }
+};
+
+// src/modules/comments/comment.route.ts
+import express14 from "express";
+
+// src/modules/comments/comment.service.ts
+var getUserComments = async (userId, params) => {
+  try {
+    const { search, sortBy, dateRange, page, limit } = params;
+    const skip = (page - 1) * limit;
+    const where = {
+      userId,
+      isDeleted: false
+    };
+    if (search) {
+      where.OR = [
+        { content: { contains: search, mode: "insensitive" } },
+        {
+          idea: {
+            title: { contains: search, mode: "insensitive" }
+          }
+        }
+      ];
+    }
+    if (dateRange) {
+      const now = /* @__PURE__ */ new Date();
+      let startDate;
+      switch (dateRange) {
+        case "week":
+          startDate = new Date(now.setDate(now.getDate() - 7));
+          break;
+        case "month":
+          startDate = new Date(now.setDate(now.getDate() - 30));
+          break;
+        default:
+          startDate = /* @__PURE__ */ new Date(0);
+      }
+      if (dateRange !== "all") {
+        where.createdAt = { gte: startDate };
+      }
+    }
+    let orderBy = {};
+    switch (sortBy) {
+      case "oldest":
+        orderBy = { createdAt: "asc" };
+        break;
+      case "mostVoted":
+        orderBy = { createdAt: "desc" };
+        break;
+      default:
+        orderBy = { createdAt: "desc" };
+    }
+    const comments = await prisma.comment.findMany({
+      where,
+      skip,
+      take: limit,
+      orderBy,
+      include: {
+        idea: {
+          select: {
+            id: true,
+            title: true,
+            imageUrl: true,
+            voteScore: true
+          }
+        },
+        _count: {
+          select: {
+            replies: {
+              where: { isDeleted: false }
+            }
+          }
+        }
+      }
+    });
+    const totalItems = await prisma.comment.count({ where });
+    const totalComments = await prisma.comment.count({
+      where: { userId, isDeleted: false }
+    });
+    const mostActiveIdeaResult = await prisma.comment.groupBy({
+      by: ["ideaId"],
+      where: { userId, isDeleted: false },
+      _count: { ideaId: true },
+      orderBy: { _count: { ideaId: "desc" } },
+      take: 1
+    });
+    let mostActiveIdea = null;
+    if (mostActiveIdeaResult && mostActiveIdeaResult.length > 0 && mostActiveIdeaResult[0]) {
+      const idea = await prisma.idea.findUnique({
+        where: { id: mostActiveIdeaResult[0].ideaId },
+        select: { title: true }
+      });
+      mostActiveIdea = idea?.title || null;
+    }
+    const lastComment = await prisma.comment.findFirst({
+      where: { userId, isDeleted: false },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true }
+    });
+    const lastCommentDate = lastComment?.createdAt || null;
+    const formattedComments = comments.map((comment) => ({
+      id: comment.id,
+      content: comment.content,
+      isDeleted: comment.isDeleted,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt,
+      idea: {
+        id: comment.idea.id,
+        title: comment.idea.title,
+        imageUrl: comment.idea.imageUrl,
+        voteScore: comment.idea.voteScore
+      },
+      replyCount: comment._count.replies
+    }));
+    return {
+      success: true,
+      data: {
+        comments: formattedComments,
+        stats: {
+          totalComments,
+          mostActiveIdea,
+          lastCommentDate: lastCommentDate?.toISOString() || null
+        },
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems,
+          itemsPerPage: limit
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Get user comments error:", error);
+    return { success: false, message: "Failed to fetch comments" };
+  }
+};
+var getComments = async (ideaId, page, limit) => {
+  try {
+    const skip = (page - 1) * limit;
+    const idea = await prisma.idea.findUnique({
+      where: { id: ideaId }
+    });
+    if (!idea) {
+      return { success: false, message: "Idea not found" };
+    }
+    const comments = await prisma.comment.findMany({
+      where: {
+        ideaId,
+        parentId: null,
+        isDeleted: false
+      },
+      skip,
+      take: limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true
+          }
+        },
+        replies: {
+          where: { isDeleted: false },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                image: true
+              }
+            },
+            replies: {
+              where: { isDeleted: false },
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    image: true
+                  }
+                },
+                replies: {
+                  where: { isDeleted: false },
+                  include: {
+                    user: {
+                      select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        image: true
+                      }
+                    }
+                  },
+                  orderBy: { createdAt: "asc" }
+                }
+              },
+              orderBy: { createdAt: "asc" }
+            }
+          },
+          orderBy: { createdAt: "asc" }
+        }
+      }
+    });
+    const totalItems = await prisma.comment.count({
+      where: {
+        ideaId,
+        parentId: null,
+        isDeleted: false
+      }
+    });
+    const formattedComments = comments.map((comment) => ({
+      id: comment.id,
+      content: comment.content,
+      isDeleted: comment.isDeleted,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt,
+      user: comment.user,
+      parentId: comment.parentId,
+      replyCount: comment.replies.length,
+      replies: comment.replies.map((reply) => ({
+        id: reply.id,
+        content: reply.content,
+        isDeleted: reply.isDeleted,
+        createdAt: reply.createdAt,
+        updatedAt: reply.updatedAt,
+        user: reply.user,
+        parentId: reply.parentId,
+        replyCount: reply.replies.length,
+        replies: reply.replies.map((nestedReply) => ({
+          id: nestedReply.id,
+          content: nestedReply.content,
+          isDeleted: nestedReply.isDeleted,
+          createdAt: nestedReply.createdAt,
+          updatedAt: nestedReply.updatedAt,
+          user: nestedReply.user,
+          parentId: nestedReply.parentId,
+          replyCount: 0,
+          replies: []
+        }))
+      }))
+    }));
+    return {
+      success: true,
+      data: {
+        comments: formattedComments,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems,
+          itemsPerPage: limit
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Get comments error:", error);
+    return { success: false, message: "Failed to fetch comments" };
+  }
+};
+var createComment = async (userId, ideaId, data) => {
+  try {
+    const idea = await prisma.idea.findUnique({
+      where: { id: ideaId }
+    });
+    if (!idea) {
+      return { success: false, message: "Idea not found" };
+    }
+    if (data.parentId) {
+      const parentComment = await prisma.comment.findUnique({
+        where: { id: data.parentId }
+      });
+      if (!parentComment) {
+        return { success: false, message: "Parent comment not found" };
+      }
+      if (parentComment.ideaId !== ideaId) {
+        return { success: false, message: "Reply must be on a comment from the same idea" };
+      }
+    }
+    const comment = await prisma.comment.create({
+      data: {
+        content: data.content,
+        userId,
+        ideaId,
+        parentId: data.parentId
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true
+          }
+        }
+      }
+    });
+    await prisma.idea.update({
+      where: { id: ideaId },
+      data: { commentCount: { increment: 1 } }
+    });
+    await prisma.activityLog.create({
+      data: {
+        action: "ADD_COMMENT",
+        userId,
+        details: {
+          ideaId,
+          commentId: comment.id,
+          parentId: data.parentId
+        },
+        ipAddress: "",
+        userAgent: ""
+      }
+    });
+    return {
+      success: true,
+      data: {
+        id: comment.id,
+        content: comment.content,
+        createdAt: comment.createdAt,
+        updatedAt: comment.updatedAt,
+        user: comment.user,
+        parentId: comment.parentId,
+        replies: [],
+        replyCount: 0
+      }
+    };
+  } catch (error) {
+    console.error("Create comment error:", error);
+    return { success: false, message: "Failed to create comment" };
+  }
+};
+var updateComment = async (commentId, userId, isAdmin, data) => {
+  try {
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId }
+    });
+    if (!comment) {
+      return { success: false, message: "Comment not found" };
+    }
+    if (comment.userId !== userId && !isAdmin) {
+      return { success: false, message: "You don't have permission to edit this comment" };
+    }
+    const updatedComment = await prisma.comment.update({
+      where: { id: commentId },
+      data: {
+        content: data.content
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true
+          }
+        }
+      }
+    });
+    return {
+      success: true,
+      data: {
+        id: updatedComment.id,
+        content: updatedComment.content,
+        createdAt: updatedComment.createdAt,
+        updatedAt: updatedComment.updatedAt,
+        user: updatedComment.user,
+        parentId: updatedComment.parentId
+      }
+    };
+  } catch (error) {
+    console.error("Update comment error:", error);
+    return { success: false, message: "Failed to update comment" };
+  }
+};
+var deleteComment = async (commentId, userId, isAdmin) => {
+  try {
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId }
+    });
+    if (!comment) {
+      return { success: false, message: "Comment not found" };
+    }
+    if (comment.userId !== userId && !isAdmin) {
+      return { success: false, message: "You don't have permission to delete this comment" };
+    }
+    await prisma.comment.update({
+      where: { id: commentId },
+      data: { isDeleted: true }
+    });
+    await prisma.idea.update({
+      where: { id: comment.ideaId },
+      data: { commentCount: { decrement: 1 } }
+    });
+    await prisma.activityLog.create({
+      data: {
+        action: "DELETE_COMMENT",
+        userId,
+        details: {
+          commentId,
+          ideaId: comment.ideaId
+        },
+        ipAddress: "",
+        userAgent: ""
+      }
+    });
+    return {
+      success: true,
+      data: { ideaId: comment.ideaId }
+    };
+  } catch (error) {
+    console.error("Delete comment error:", error);
+    return { success: false, message: "Failed to delete comment" };
+  }
+};
+var reportComment = async (commentId, reporterId, reason) => {
+  try {
+    const comment = await prisma.comment.findUnique({
+      where: { id: commentId }
+    });
+    if (!comment) {
+      return { success: false, message: "Comment not found" };
+    }
+    const existingReport = await prisma.commentReport.findFirst({
+      where: {
+        commentId,
+        reporterId,
+        status: "PENDING"
+      }
+    });
+    if (existingReport) {
+      return { success: false, message: "You have already reported this comment" };
+    }
+    await prisma.commentReport.create({
+      data: {
+        commentId,
+        reporterId,
+        reason,
+        status: "PENDING"
+      }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Report comment error:", error);
+    return { success: false, message: "Failed to report comment" };
+  }
+};
+var commentService = {
+  getUserComments,
+  getComments,
+  createComment,
+  updateComment,
+  deleteComment,
+  reportComment
+};
+
+// src/modules/comments/comment.controller.ts
+var getUserComments2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const search = req.query.search;
+    const sortBy = req.query.sortBy;
+    const dateRange = req.query.dateRange;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const result = await commentService.getUserComments(userId, {
+      search,
+      sortBy,
+      dateRange,
+      page,
+      limit
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var getComments2 = async (req, res, next) => {
+  try {
+    const { ideaId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    if (!ideaId) {
+      return res.status(400).json({
+        success: false,
+        message: "Idea ID is required"
+      });
+    }
+    const result = await commentService.getComments(ideaId, page, limit);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var createComment2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { ideaId } = req.params;
+    const { content, parentId } = req.body;
+    if (!ideaId) {
+      return res.status(400).json({
+        success: false,
+        message: "Idea ID is required"
+      });
+    }
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment content is required"
+      });
+    }
+    if (content.length > 5e3) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment cannot exceed 5000 characters"
+      });
+    }
+    const result = await commentService.createComment(userId, ideaId, {
+      content: content.trim(),
+      parentId: parentId || null
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(201).json({
+      success: true,
+      data: result.data,
+      message: "Comment posted successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var updateComment2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { commentId } = req.params;
+    const { content } = req.body;
+    const isAdmin = req.user.role === "ADMIN";
+    if (!commentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment ID is required"
+      });
+    }
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment content is required"
+      });
+    }
+    if (content.length > 5e3) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment cannot exceed 5000 characters"
+      });
+    }
+    const result = await commentService.updateComment(commentId, userId, isAdmin, {
+      content: content.trim()
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      data: result.data,
+      message: "Comment updated successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var deleteComment2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { commentId } = req.params;
+    const isAdmin = req.user.role === "ADMIN";
+    if (!commentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment ID is required"
+      });
+    }
+    const result = await commentService.deleteComment(commentId, userId, isAdmin);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Comment deleted successfully"
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var reportComment2 = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { commentId } = req.params;
+    const { reason } = req.body;
+    if (!commentId) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment ID is required"
+      });
+    }
+    if (!reason || reason.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Report reason is required"
+      });
+    }
+    if (reason.length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: "Reason cannot exceed 500 characters"
+      });
+    }
+    const result = await commentService.reportComment(commentId, userId, reason.trim());
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return res.status(200).json({
+      success: true,
+      message: "Comment reported successfully. Our moderators will review it."
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+var commentController = {
+  getUserComments: getUserComments2,
+  getComments: getComments2,
+  createComment: createComment2,
+  updateComment: updateComment2,
+  deleteComment: deleteComment2,
+  reportComment: reportComment2
+};
+
+// src/modules/comments/comment.route.ts
+var router14 = express14.Router();
+router14.get("/idea/:ideaId", commentController.getComments);
+router14.use(auth_default(Role.MEMBER, Role.ADMIN));
+router14.get("/user/comments", commentController.getUserComments);
+router14.post("/idea/:ideaId", commentController.createComment);
+router14.patch("/:commentId", commentController.updateComment);
+router14.delete("/:commentId", commentController.deleteComment);
+router14.post("/:commentId/report", commentController.reportComment);
+var commentRouter = router14;
+
 // src/app.ts
-var app = express8();
+var app = express15();
 var allowedOrigins = [
   "http://localhost:3000",
   "http://localhost:5000",
@@ -3333,15 +6762,24 @@ app.use(
     exposedHeaders: ["Set-Cookie"]
   })
 );
-app.use(express8.json());
+app.post("/api/v1/payments/webhook", express15.raw({ type: "application/json" }), PaymentController.handleWebhook);
+app.use(express15.json());
+app.use(optionalAuth);
 app.all("/api/auth/*splat", toNodeHandler(auth));
+app.use("/api/v1/payments", paymentRouter);
+app.use("/api/v1/upload", uploadRouter);
 app.use("/api/v1/categories", categoryRouter);
 app.use("/api/v1/ideas", ideasRouter);
+app.use("/api/v1/votes", voteRouter);
+app.use("/api/v1/comments", commentRouter);
 app.use("/api/v1/member", memberRouter);
 app.use("/api/v1/admin", adminRouter);
+app.use("/api/v1/members", memberProfileRouter);
+app.use("/api/v1/admin/settings", adminSettingsRouter);
+app.use("/api/v1/admin/users", userManagementRouter);
+app.use("/api/v1/bookmarks", bookmarkRouter);
 app.use("/api/v1/stats", statsRouter);
 app.use("/api/v1/newsletter", newsletterRouter);
-app.use("/api/v1/upload", uploadRouter);
 app.get("/", (req, res) => {
   res.send("Hello, World!");
 });
