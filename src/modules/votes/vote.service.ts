@@ -152,8 +152,155 @@ const getUserVote = async (userId: string, ideaId: string) => {
     }
 };
 
+const getUserVotes = async (
+    userId: string,
+    params: {
+        voteType?: string;
+        sortBy?: string;
+        search?: string;
+        category?: string;
+        page: number;
+        limit: number;
+    }
+) => {
+    try {
+        const { voteType, sortBy, search, category, page, limit } = params;
+        const skip = (page - 1) * limit;
+
+        // Build where clause for votes
+        const where: any = {
+            userId,
+        };
+
+        if (voteType && voteType !== 'all') {
+            where.voteType = voteType;
+        }
+
+        // Build where clause for ideas (for search and category)
+        const ideaWhere: any = {};
+
+        if (search) {
+            ideaWhere.OR = [
+                { title: { contains: search, mode: 'insensitive' } },
+                { description: { contains: search, mode: 'insensitive' } },
+            ];
+        }
+
+        if (category) {
+            ideaWhere.categories = {
+                some: {
+                    category: {
+                        slug: category,
+                    },
+                },
+            };
+        }
+
+        // Get votes with idea details
+        const votes = await prisma.vote.findMany({
+            where: {
+                ...where,
+                idea: ideaWhere,
+            },
+            skip,
+            take: limit,
+            orderBy: {
+                createdAt: sortBy === 'oldest' ? 'asc' : 'desc',
+            },
+            include: {
+                idea: {
+                    select: {
+                        id: true,
+                        title: true,
+                        description: true,
+                        imageUrl: true,
+                        voteScore: true,
+                        status: true,
+                        categories: {
+                            include: {
+                                category: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        slug: true,
+                                    },
+                                },
+                            },
+                        },
+                        author: {
+                            select: {
+                                id: true,
+                                name: true,
+                                image: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        // Get total count for pagination
+        const totalItems = await prisma.vote.count({
+            where: {
+                ...where,
+                idea: ideaWhere,
+            },
+        });
+
+        // Get stats
+        const stats = await prisma.$transaction([
+            prisma.vote.count({ where: { userId } }),
+            prisma.vote.count({ where: { userId, voteType: 'UP' } }),
+            prisma.vote.count({ where: { userId, voteType: 'DOWN' } }),
+        ]);
+
+        // Format the response
+        const formattedVotes = votes.map(vote => ({
+            id: vote.id,
+            voteType: vote.voteType,
+            createdAt: vote.createdAt,
+            idea: {
+                id: vote.idea.id,
+                title: vote.idea.title,
+                description: vote.idea.description,
+                imageUrl: vote.idea.imageUrl,
+                voteScore: vote.idea.voteScore,
+                status: vote.idea.status,
+                categories: vote.idea.categories.map(c => ({
+                    id: c.category.id,
+                    name: c.category.name,
+                    slug: c.category.slug,
+                })),
+                author: vote.idea.author,
+            },
+        }));
+
+        return {
+            success: true,
+            data: {
+                votes: formattedVotes,
+                stats: {
+                    totalVotes: stats[0],
+                    upvotes: stats[1],
+                    downvotes: stats[2],
+                },
+                pagination: {
+                    currentPage: page,
+                    totalPages: Math.ceil(totalItems / limit),
+                    totalItems,
+                    itemsPerPage: limit,
+                },
+            },
+        };
+    } catch (error) {
+        console.error("Get user votes error:", error);
+        return { success: false, message: "Failed to fetch votes" };
+    }
+};
+
 export const voteService = {
     castVote,
     removeVote,
     getUserVote,
+    getUserVotes
 };

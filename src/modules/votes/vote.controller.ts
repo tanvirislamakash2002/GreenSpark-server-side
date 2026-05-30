@@ -84,8 +84,41 @@ const getUserVote = async (req: Request, res: Response, next: NextFunction) => {
     }
 };
 
+const getUserVotes = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user!.id;
+        const voteType = req.query.voteType as string;
+        const sortBy = req.query.sortBy as string;
+        const search = req.query.search as string;
+        const category = req.query.category as string;
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+
+        const result = await voteService.getUserVotes(userId, {
+            voteType,
+            sortBy,
+            search,
+            category,
+            page,
+            limit,
+        });
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return res.status(200).json({
+            success: true,
+            data: result.data,
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const voteController = {
     castVote,
     removeVote,
     getUserVote,
+    getUserVotes
 };
