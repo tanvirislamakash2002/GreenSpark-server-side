@@ -20,6 +20,7 @@ import { paymentRouter } from "./modules/payment/payment.route";
 import { optionalAuth } from "./middlewares/optionalAuth";
 import { PaymentController } from "./modules/payment/payment.controller";
 import { commentRouter } from "./modules/comment/comment.route";
+import { analyticsRouter } from "./modules/analytics/analytics.route";
 
 const app: Application = express()
 
@@ -77,6 +78,7 @@ app.use("/api/v1/members", memberProfileRouter);
 app.use("/api/v1/admin/settings", adminSettingsRouter);
 app.use("/api/v1/admin/users", userManagementRouter);
 app.use("/api/v1/bookmarks", bookmarkRouter);
+app.use("/api/v1/admin/analytics", analyticsRouter);
 app.use("/api/v1/stats", statsRouter);
 app.use("/api/v1/newsletter", newsletterRouter);
 
