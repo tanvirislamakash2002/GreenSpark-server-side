@@ -1,7 +1,7 @@
 import { prisma } from "../../../lib/prisma";
 import { formatCommentsWithNestedReplies } from "./base-comment.service";
 
-export const getComments = async (ideaId: string, page: number, limit: number) => {
+export const getComments = async (ideaId: string, page: number, limit: number, currentUserId?: string) => {
     try {
         const skip = (page - 1) * limit;
 
@@ -14,7 +14,20 @@ export const getComments = async (ideaId: string, page: number, limit: number) =
         }
 
         const comments = await prisma.comment.findMany({
-            where: { ideaId, parentId: null, isDeleted: false },
+            where: {
+                ideaId,
+                parentId: null,
+                isDeleted: false,
+                // Hide resolved comments from public
+                ...(currentUserId ? {
+                    OR: [
+                        { reports: { none: { status: 'RESOLVED' } } },
+                        { userId: currentUserId }, // Author sees their own
+                    ]
+                } : {
+                    reports: { none: { status: 'RESOLVED' } } // Public hides resolved
+                }),
+            },
             skip,
             take: limit,
             orderBy: { createdAt: "desc" },

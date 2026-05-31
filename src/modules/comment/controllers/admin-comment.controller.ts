@@ -6,6 +6,7 @@ import {
     adminRestoreComment,
     adminResolveReports,
     adminBulkAction,
+    adminDismissReports,
 } from "../services/admin-comment.service";
 import { sendSuccessResponse, validateRequiredParams } from "./base-comment.controller";
 
@@ -116,6 +117,26 @@ export const adminResolveReportsController = async (req: Request, res: Response,
     }
 };
 
+export const adminDismissReportsController = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const adminId = req.user!.id;
+        const { commentId } = req.params;
+
+        const validationError = validateRequiredParams(res, { commentId }, ["commentId"]);
+        if (validationError) return validationError;
+
+        const result = await adminDismissReports(commentId as string, adminId);
+
+        if (!result.success) {
+            return res.status(400).json(result);
+        }
+
+        return sendSuccessResponse(res, null, result.message);
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const adminBulkActionController = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const adminId = req.user!.id;
@@ -131,7 +152,7 @@ export const adminBulkActionController = async (req: Request, res: Response, nex
             });
         }
 
-        const validActions = ["delete", "restore", "resolve"];
+        const validActions = ["delete", "restore", "resolve", "dismiss"];
         if (!validActions.includes(action)) {
             return res.status(400).json({
                 success: false,

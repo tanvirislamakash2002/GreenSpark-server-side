@@ -24,6 +24,7 @@ router.get("/admin/comments/:commentId/reports", commentController.getCommentRep
 router.delete("/admin/comments/:commentId", commentController.adminDeleteComment);
 router.patch("/admin/comments/:commentId/restore", commentController.adminRestoreComment);
 router.patch("/admin/comments/:commentId/resolve", commentController.adminResolveReports);
+router.patch("/admin/comments/:commentId/dismiss", commentController.adminDismissReports);
 router.post("/admin/comments/bulk", commentController.adminBulkAction);
 
 export const commentRouter: Router = router;

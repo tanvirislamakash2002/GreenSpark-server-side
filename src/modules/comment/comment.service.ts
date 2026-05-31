@@ -7,5 +7,6 @@ export {
     adminDeleteComment,
     adminRestoreComment,
     adminResolveReports,
+    adminDismissReports,
     adminBulkAction,
 } from "./services/admin-comment.service";

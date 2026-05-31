@@ -7,6 +7,7 @@ export const getCommentsController = async (req: Request, res: Response, next: N
         const { ideaId } = req.params;
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
+        const currentUserId = req.user?.id;
 
         if (!ideaId) {
             return res.status(400).json({
@@ -15,7 +16,7 @@ export const getCommentsController = async (req: Request, res: Response, next: N
             });
         }
 
-        const result = await getComments(ideaId as string, page, limit);
+        const result = await getComments(ideaId as string, page, limit, currentUserId);
 
         if (!result.success) {
             return res.status(400).json(result);

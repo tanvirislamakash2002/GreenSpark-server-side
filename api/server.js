@@ -6071,141 +6071,63 @@ var optionalAuth = async (req, res, next) => {
   }
 };
 
-// src/modules/comments/comment.route.ts
+// src/modules/comment/comment.route.ts
 import express14 from "express";
 
-// src/modules/comments/comment.service.ts
-var getUserComments = async (userId, params) => {
-  try {
-    const { search, sortBy, dateRange, page, limit } = params;
-    const skip = (page - 1) * limit;
-    const where = {
-      userId,
-      isDeleted: false
-    };
-    if (search) {
-      where.OR = [
-        { content: { contains: search, mode: "insensitive" } },
-        {
-          idea: {
-            title: { contains: search, mode: "insensitive" }
-          }
-        }
-      ];
-    }
-    if (dateRange) {
-      const now = /* @__PURE__ */ new Date();
-      let startDate;
-      switch (dateRange) {
-        case "week":
-          startDate = new Date(now.setDate(now.getDate() - 7));
-          break;
-        case "month":
-          startDate = new Date(now.setDate(now.getDate() - 30));
-          break;
-        default:
-          startDate = /* @__PURE__ */ new Date(0);
-      }
-      if (dateRange !== "all") {
-        where.createdAt = { gte: startDate };
-      }
-    }
-    let orderBy = {};
-    switch (sortBy) {
-      case "oldest":
-        orderBy = { createdAt: "asc" };
-        break;
-      case "mostVoted":
-        orderBy = { createdAt: "desc" };
-        break;
-      default:
-        orderBy = { createdAt: "desc" };
-    }
-    const comments = await prisma.comment.findMany({
-      where,
-      skip,
-      take: limit,
-      orderBy,
-      include: {
-        idea: {
-          select: {
-            id: true,
-            title: true,
-            imageUrl: true,
-            voteScore: true
-          }
-        },
-        _count: {
-          select: {
-            replies: {
-              where: { isDeleted: false }
-            }
-          }
-        }
-      }
-    });
-    const totalItems = await prisma.comment.count({ where });
-    const totalComments = await prisma.comment.count({
-      where: { userId, isDeleted: false }
-    });
-    const mostActiveIdeaResult = await prisma.comment.groupBy({
-      by: ["ideaId"],
-      where: { userId, isDeleted: false },
-      _count: { ideaId: true },
-      orderBy: { _count: { ideaId: "desc" } },
-      take: 1
-    });
-    let mostActiveIdea = null;
-    if (mostActiveIdeaResult && mostActiveIdeaResult.length > 0 && mostActiveIdeaResult[0]) {
-      const idea = await prisma.idea.findUnique({
-        where: { id: mostActiveIdeaResult[0].ideaId },
-        select: { title: true }
-      });
-      mostActiveIdea = idea?.title || null;
-    }
-    const lastComment = await prisma.comment.findFirst({
-      where: { userId, isDeleted: false },
-      orderBy: { createdAt: "desc" },
-      select: { createdAt: true }
-    });
-    const lastCommentDate = lastComment?.createdAt || null;
-    const formattedComments = comments.map((comment) => ({
-      id: comment.id,
-      content: comment.content,
-      isDeleted: comment.isDeleted,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
-      idea: {
-        id: comment.idea.id,
-        title: comment.idea.title,
-        imageUrl: comment.idea.imageUrl,
-        voteScore: comment.idea.voteScore
-      },
-      replyCount: comment._count.replies
-    }));
-    return {
-      success: true,
-      data: {
-        comments: formattedComments,
-        stats: {
-          totalComments,
-          mostActiveIdea,
-          lastCommentDate: lastCommentDate?.toISOString() || null
-        },
-        pagination: {
-          currentPage: page,
-          totalPages: Math.ceil(totalItems / limit),
-          totalItems,
-          itemsPerPage: limit
-        }
-      }
-    };
-  } catch (error) {
-    console.error("Get user comments error:", error);
-    return { success: false, message: "Failed to fetch comments" };
-  }
+// src/modules/comment/services/base-comment.service.ts
+var formatCommentsWithNestedReplies = (comments) => {
+  return comments.map((comment) => ({
+    id: comment.id,
+    content: comment.content,
+    isDeleted: comment.isDeleted,
+    createdAt: comment.createdAt,
+    updatedAt: comment.updatedAt,
+    user: comment.user,
+    parentId: comment.parentId,
+    replyCount: comment.replies.length,
+    replies: comment.replies.map((reply) => ({
+      id: reply.id,
+      content: reply.content,
+      isDeleted: reply.isDeleted,
+      createdAt: reply.createdAt,
+      updatedAt: reply.updatedAt,
+      user: reply.user,
+      parentId: reply.parentId,
+      replyCount: reply.replies.length,
+      replies: reply.replies.map((nestedReply) => ({
+        id: nestedReply.id,
+        content: nestedReply.content,
+        isDeleted: nestedReply.isDeleted,
+        createdAt: nestedReply.createdAt,
+        updatedAt: nestedReply.updatedAt,
+        user: nestedReply.user,
+        parentId: nestedReply.parentId,
+        replyCount: 0,
+        replies: []
+      }))
+    }))
+  }));
 };
-var getComments = async (ideaId, page, limit) => {
+var updateIdeaCommentCount = async (ideaId, increment) => {
+  await prisma.idea.update({
+    where: { id: ideaId },
+    data: { commentCount: { increment } }
+  });
+};
+var logActivity = async (userId, action, details) => {
+  await prisma.activityLog.create({
+    data: {
+      action,
+      userId,
+      details,
+      ipAddress: "",
+      userAgent: ""
+    }
+  });
+};
+
+// src/modules/comment/services/public-comment.service.ts
+var getComments = async (ideaId, page, limit, currentUserId) => {
   try {
     const skip = (page - 1) * limit;
     const idea = await prisma.idea.findUnique({
@@ -6218,53 +6140,36 @@ var getComments = async (ideaId, page, limit) => {
       where: {
         ideaId,
         parentId: null,
-        isDeleted: false
+        isDeleted: false,
+        // Hide resolved comments from public
+        ...currentUserId ? {
+          OR: [
+            { reports: { none: { status: "RESOLVED" } } },
+            { userId: currentUserId }
+            // Author sees their own
+          ]
+        } : {
+          reports: { none: { status: "RESOLVED" } }
+          // Public hides resolved
+        }
       },
       skip,
       take: limit,
       orderBy: { createdAt: "desc" },
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true
-          }
-        },
+        user: { select: { id: true, name: true, email: true, image: true } },
         replies: {
           where: { isDeleted: false },
           include: {
-            user: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
-                image: true
-              }
-            },
+            user: { select: { id: true, name: true, email: true, image: true } },
             replies: {
               where: { isDeleted: false },
               include: {
-                user: {
-                  select: {
-                    id: true,
-                    name: true,
-                    email: true,
-                    image: true
-                  }
-                },
+                user: { select: { id: true, name: true, email: true, image: true } },
                 replies: {
                   where: { isDeleted: false },
                   include: {
-                    user: {
-                      select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        image: true
-                      }
-                    }
+                    user: { select: { id: true, name: true, email: true, image: true } }
                   },
                   orderBy: { createdAt: "asc" }
                 }
@@ -6277,47 +6182,12 @@ var getComments = async (ideaId, page, limit) => {
       }
     });
     const totalItems = await prisma.comment.count({
-      where: {
-        ideaId,
-        parentId: null,
-        isDeleted: false
-      }
+      where: { ideaId, parentId: null, isDeleted: false }
     });
-    const formattedComments = comments.map((comment) => ({
-      id: comment.id,
-      content: comment.content,
-      isDeleted: comment.isDeleted,
-      createdAt: comment.createdAt,
-      updatedAt: comment.updatedAt,
-      user: comment.user,
-      parentId: comment.parentId,
-      replyCount: comment.replies.length,
-      replies: comment.replies.map((reply) => ({
-        id: reply.id,
-        content: reply.content,
-        isDeleted: reply.isDeleted,
-        createdAt: reply.createdAt,
-        updatedAt: reply.updatedAt,
-        user: reply.user,
-        parentId: reply.parentId,
-        replyCount: reply.replies.length,
-        replies: reply.replies.map((nestedReply) => ({
-          id: nestedReply.id,
-          content: nestedReply.content,
-          isDeleted: nestedReply.isDeleted,
-          createdAt: nestedReply.createdAt,
-          updatedAt: nestedReply.updatedAt,
-          user: nestedReply.user,
-          parentId: nestedReply.parentId,
-          replyCount: 0,
-          replies: []
-        }))
-      }))
-    }));
     return {
       success: true,
       data: {
-        comments: formattedComments,
+        comments: formatCommentsWithNestedReplies(comments),
         pagination: {
           currentPage: page,
           totalPages: Math.ceil(totalItems / limit),
@@ -6331,21 +6201,60 @@ var getComments = async (ideaId, page, limit) => {
     return { success: false, message: "Failed to fetch comments" };
   }
 };
+
+// src/modules/comment/controllers/base-comment.controller.ts
+var validateRequiredParams = (res, params, required) => {
+  for (const param of required) {
+    if (!params[param]) {
+      return res.status(400).json({
+        success: false,
+        message: `${param} is required`
+      });
+    }
+  }
+  return null;
+};
+var sendSuccessResponse = (res, data, message, status = 200) => {
+  return res.status(status).json({
+    success: true,
+    ...message && { message },
+    ...data && { data }
+  });
+};
+
+// src/modules/comment/controllers/public-comment.controller.ts
+var getCommentsController = async (req, res, next) => {
+  try {
+    const { ideaId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const currentUserId = req.user?.id;
+    if (!ideaId) {
+      return res.status(400).json({
+        success: false,
+        message: "Idea ID is required"
+      });
+    }
+    const result = await getComments(ideaId, page, limit, currentUserId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, result.data);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// src/modules/comment/services/member-comment.service.ts
 var createComment = async (userId, ideaId, data) => {
   try {
-    const idea = await prisma.idea.findUnique({
-      where: { id: ideaId }
-    });
-    if (!idea) {
-      return { success: false, message: "Idea not found" };
-    }
+    const idea = await prisma.idea.findUnique({ where: { id: ideaId } });
+    if (!idea) return { success: false, message: "Idea not found" };
     if (data.parentId) {
       const parentComment = await prisma.comment.findUnique({
         where: { id: data.parentId }
       });
-      if (!parentComment) {
-        return { success: false, message: "Parent comment not found" };
-      }
+      if (!parentComment) return { success: false, message: "Parent comment not found" };
       if (parentComment.ideaId !== ideaId) {
         return { success: false, message: "Reply must be on a comment from the same idea" };
       }
@@ -6358,33 +6267,11 @@ var createComment = async (userId, ideaId, data) => {
         parentId: data.parentId
       },
       include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true
-          }
-        }
+        user: { select: { id: true, name: true, email: true, image: true } }
       }
     });
-    await prisma.idea.update({
-      where: { id: ideaId },
-      data: { commentCount: { increment: 1 } }
-    });
-    await prisma.activityLog.create({
-      data: {
-        action: "ADD_COMMENT",
-        userId,
-        details: {
-          ideaId,
-          commentId: comment.id,
-          parentId: data.parentId
-        },
-        ipAddress: "",
-        userAgent: ""
-      }
-    });
+    await updateIdeaCommentCount(ideaId, 1);
+    await logActivity(userId, "ADD_COMMENT", { ideaId, commentId: comment.id, parentId: data.parentId });
     return {
       success: true,
       data: {
@@ -6405,30 +6292,15 @@ var createComment = async (userId, ideaId, data) => {
 };
 var updateComment = async (commentId, userId, isAdmin, data) => {
   try {
-    const comment = await prisma.comment.findUnique({
-      where: { id: commentId }
-    });
-    if (!comment) {
-      return { success: false, message: "Comment not found" };
-    }
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return { success: false, message: "Comment not found" };
     if (comment.userId !== userId && !isAdmin) {
       return { success: false, message: "You don't have permission to edit this comment" };
     }
     const updatedComment = await prisma.comment.update({
       where: { id: commentId },
-      data: {
-        content: data.content
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            image: true
-          }
-        }
-      }
+      data: { content: data.content },
+      include: { user: { select: { id: true, name: true, email: true, image: true } } }
     });
     return {
       success: true,
@@ -6448,39 +6320,15 @@ var updateComment = async (commentId, userId, isAdmin, data) => {
 };
 var deleteComment = async (commentId, userId, isAdmin) => {
   try {
-    const comment = await prisma.comment.findUnique({
-      where: { id: commentId }
-    });
-    if (!comment) {
-      return { success: false, message: "Comment not found" };
-    }
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return { success: false, message: "Comment not found" };
     if (comment.userId !== userId && !isAdmin) {
       return { success: false, message: "You don't have permission to delete this comment" };
     }
-    await prisma.comment.update({
-      where: { id: commentId },
-      data: { isDeleted: true }
-    });
-    await prisma.idea.update({
-      where: { id: comment.ideaId },
-      data: { commentCount: { decrement: 1 } }
-    });
-    await prisma.activityLog.create({
-      data: {
-        action: "DELETE_COMMENT",
-        userId,
-        details: {
-          commentId,
-          ideaId: comment.ideaId
-        },
-        ipAddress: "",
-        userAgent: ""
-      }
-    });
-    return {
-      success: true,
-      data: { ideaId: comment.ideaId }
-    };
+    await prisma.comment.update({ where: { id: commentId }, data: { isDeleted: true } });
+    await updateIdeaCommentCount(comment.ideaId, -1);
+    await logActivity(userId, "DELETE_COMMENT", { commentId, ideaId: comment.ideaId });
+    return { success: true, data: { ideaId: comment.ideaId } };
   } catch (error) {
     console.error("Delete comment error:", error);
     return { success: false, message: "Failed to delete comment" };
@@ -6488,29 +6336,14 @@ var deleteComment = async (commentId, userId, isAdmin) => {
 };
 var reportComment = async (commentId, reporterId, reason) => {
   try {
-    const comment = await prisma.comment.findUnique({
-      where: { id: commentId }
-    });
-    if (!comment) {
-      return { success: false, message: "Comment not found" };
-    }
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return { success: false, message: "Comment not found" };
     const existingReport = await prisma.commentReport.findFirst({
-      where: {
-        commentId,
-        reporterId,
-        status: "PENDING"
-      }
+      where: { commentId, reporterId, status: "PENDING" }
     });
-    if (existingReport) {
-      return { success: false, message: "You have already reported this comment" };
-    }
+    if (existingReport) return { success: false, message: "You have already reported this comment" };
     await prisma.commentReport.create({
-      data: {
-        commentId,
-        reporterId,
-        reason,
-        status: "PENDING"
-      }
+      data: { commentId, reporterId, reason, status: "PENDING" }
     });
     return { success: true };
   } catch (error) {
@@ -6518,17 +6351,187 @@ var reportComment = async (commentId, reporterId, reason) => {
     return { success: false, message: "Failed to report comment" };
   }
 };
-var commentService = {
-  getUserComments,
-  getComments,
-  createComment,
-  updateComment,
-  deleteComment,
-  reportComment
+
+// src/modules/comment/controllers/member-comment.controller.ts
+var createCommentController = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { ideaId } = req.params;
+    const { content, parentId } = req.body;
+    const validationError = validateRequiredParams(res, { ideaId, content }, ["ideaId", "content"]);
+    if (validationError) return validationError;
+    if (content.length > 5e3) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment cannot exceed 5000 characters"
+      });
+    }
+    const result = await createComment(userId, ideaId, { content: content.trim(), parentId: parentId || null });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, result.data, "Comment posted successfully", 201);
+  } catch (error) {
+    next(error);
+  }
+};
+var updateCommentController = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const isAdmin = req.user.role === "ADMIN";
+    const { commentId } = req.params;
+    const { content } = req.body;
+    const validationError = validateRequiredParams(res, { commentId, content }, ["commentId", "content"]);
+    if (validationError) return validationError;
+    if (content.length > 5e3) {
+      return res.status(400).json({
+        success: false,
+        message: "Comment cannot exceed 5000 characters"
+      });
+    }
+    const result = await updateComment(commentId, userId, isAdmin, { content: content.trim() });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, result.data, "Comment updated successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+var deleteCommentController = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const isAdmin = req.user.role === "ADMIN";
+    const { commentId } = req.params;
+    const validationError = validateRequiredParams(res, { commentId }, ["commentId"]);
+    if (validationError) return validationError;
+    const result = await deleteComment(commentId, userId, isAdmin);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, null, "Comment deleted successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+var reportCommentController = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { commentId } = req.params;
+    const { reason } = req.body;
+    const validationError = validateRequiredParams(res, { commentId, reason }, ["commentId", "reason"]);
+    if (validationError) return validationError;
+    if (reason.length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: "Reason cannot exceed 500 characters"
+      });
+    }
+    const result = await reportComment(commentId, userId, reason.trim());
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, null, "Comment reported successfully. Our moderators will review it.");
+  } catch (error) {
+    next(error);
+  }
 };
 
-// src/modules/comments/comment.controller.ts
-var getUserComments2 = async (req, res, next) => {
+// src/modules/comment/services/user-comment.service.ts
+var getUserComments = async (userId, params) => {
+  try {
+    const { search, sortBy, dateRange, page, limit } = params;
+    const skip = (page - 1) * limit;
+    const where = { userId, isDeleted: false };
+    if (search) {
+      where.OR = [
+        { content: { contains: search, mode: "insensitive" } },
+        { idea: { title: { contains: search, mode: "insensitive" } } }
+      ];
+    }
+    if (dateRange && dateRange !== "all") {
+      const now = /* @__PURE__ */ new Date();
+      let startDate;
+      switch (dateRange) {
+        case "week":
+          startDate = new Date(now.setDate(now.getDate() - 7));
+          break;
+        case "month":
+          startDate = new Date(now.setDate(now.getDate() - 30));
+          break;
+        default:
+          startDate = /* @__PURE__ */ new Date(0);
+      }
+      where.createdAt = { gte: startDate };
+    }
+    const orderBy = sortBy === "oldest" ? { createdAt: "asc" } : { createdAt: "desc" };
+    const [comments, totalItems, totalComments] = await Promise.all([
+      prisma.comment.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy,
+        include: {
+          idea: { select: { id: true, title: true, imageUrl: true, voteScore: true } },
+          _count: { select: { replies: { where: { isDeleted: false } } } }
+        }
+      }),
+      prisma.comment.count({ where }),
+      prisma.comment.count({ where: { userId, isDeleted: false } })
+    ]);
+    const mostActiveIdeaResult = await prisma.comment.groupBy({
+      by: ["ideaId"],
+      where: { userId, isDeleted: false },
+      _count: { ideaId: true },
+      orderBy: { _count: { ideaId: "desc" } },
+      take: 1
+    });
+    let mostActiveIdea = null;
+    if (mostActiveIdeaResult?.[0]) {
+      const idea = await prisma.idea.findUnique({
+        where: { id: mostActiveIdeaResult[0].ideaId },
+        select: { title: true }
+      });
+      mostActiveIdea = idea?.title || null;
+    }
+    const lastComment = await prisma.comment.findFirst({
+      where: { userId, isDeleted: false },
+      orderBy: { createdAt: "desc" },
+      select: { createdAt: true }
+    });
+    return {
+      success: true,
+      data: {
+        comments: comments.map((c) => ({
+          id: c.id,
+          content: c.content,
+          isDeleted: c.isDeleted,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+          idea: c.idea,
+          replyCount: c._count.replies
+        })),
+        stats: {
+          totalComments,
+          mostActiveIdea,
+          lastCommentDate: lastComment?.createdAt?.toISOString() || null
+        },
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems,
+          itemsPerPage: limit
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Get user comments error:", error);
+    return { success: false, message: "Failed to fetch comments" };
+  }
+};
+
+// src/modules/comment/controllers/user-comment.controller.ts
+var getUserCommentsController = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const search = req.query.search;
@@ -6536,7 +6539,7 @@ var getUserComments2 = async (req, res, next) => {
     const dateRange = req.query.dateRange;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-    const result = await commentService.getUserComments(userId, {
+    const result = await getUserComments(userId, {
       search,
       sortBy,
       dateRange,
@@ -6546,191 +6549,363 @@ var getUserComments2 = async (req, res, next) => {
     if (!result.success) {
       return res.status(400).json(result);
     }
-    return res.status(200).json({
-      success: true,
-      data: result.data
-    });
+    return sendSuccessResponse(res, result.data);
   } catch (error) {
     next(error);
   }
-};
-var getComments2 = async (req, res, next) => {
-  try {
-    const { ideaId } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    if (!ideaId) {
-      return res.status(400).json({
-        success: false,
-        message: "Idea ID is required"
-      });
-    }
-    const result = await commentService.getComments(ideaId, page, limit);
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      data: result.data
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var createComment2 = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const { ideaId } = req.params;
-    const { content, parentId } = req.body;
-    if (!ideaId) {
-      return res.status(400).json({
-        success: false,
-        message: "Idea ID is required"
-      });
-    }
-    if (!content || content.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Comment content is required"
-      });
-    }
-    if (content.length > 5e3) {
-      return res.status(400).json({
-        success: false,
-        message: "Comment cannot exceed 5000 characters"
-      });
-    }
-    const result = await commentService.createComment(userId, ideaId, {
-      content: content.trim(),
-      parentId: parentId || null
-    });
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(201).json({
-      success: true,
-      data: result.data,
-      message: "Comment posted successfully"
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var updateComment2 = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const { commentId } = req.params;
-    const { content } = req.body;
-    const isAdmin = req.user.role === "ADMIN";
-    if (!commentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Comment ID is required"
-      });
-    }
-    if (!content || content.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Comment content is required"
-      });
-    }
-    if (content.length > 5e3) {
-      return res.status(400).json({
-        success: false,
-        message: "Comment cannot exceed 5000 characters"
-      });
-    }
-    const result = await commentService.updateComment(commentId, userId, isAdmin, {
-      content: content.trim()
-    });
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      data: result.data,
-      message: "Comment updated successfully"
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var deleteComment2 = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const { commentId } = req.params;
-    const isAdmin = req.user.role === "ADMIN";
-    if (!commentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Comment ID is required"
-      });
-    }
-    const result = await commentService.deleteComment(commentId, userId, isAdmin);
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      message: "Comment deleted successfully"
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var reportComment2 = async (req, res, next) => {
-  try {
-    const userId = req.user.id;
-    const { commentId } = req.params;
-    const { reason } = req.body;
-    if (!commentId) {
-      return res.status(400).json({
-        success: false,
-        message: "Comment ID is required"
-      });
-    }
-    if (!reason || reason.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Report reason is required"
-      });
-    }
-    if (reason.length > 500) {
-      return res.status(400).json({
-        success: false,
-        message: "Reason cannot exceed 500 characters"
-      });
-    }
-    const result = await commentService.reportComment(commentId, userId, reason.trim());
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    return res.status(200).json({
-      success: true,
-      message: "Comment reported successfully. Our moderators will review it."
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-var commentController = {
-  getUserComments: getUserComments2,
-  getComments: getComments2,
-  createComment: createComment2,
-  updateComment: updateComment2,
-  deleteComment: deleteComment2,
-  reportComment: reportComment2
 };
 
-// src/modules/comments/comment.route.ts
+// src/modules/comment/services/admin-comment.service.ts
+var getAdminComments = async (params) => {
+  try {
+    const { search, status, reportStatus, sortBy, page, limit } = params;
+    const skip = (page - 1) * limit;
+    const where = {};
+    if (status === "reported") {
+      where.reports = { some: {} };
+    } else if (status === "deleted") {
+      where.isDeleted = true;
+    } else {
+      where.isDeleted = false;
+    }
+    if (search) {
+      where.OR = [
+        { content: { contains: search, mode: "insensitive" } },
+        { user: { name: { contains: search, mode: "insensitive" } } },
+        { user: { email: { contains: search, mode: "insensitive" } } },
+        { idea: { title: { contains: search, mode: "insensitive" } } }
+      ];
+    }
+    if (reportStatus && reportStatus !== "all") {
+      where.reports = { some: { status: reportStatus } };
+    }
+    const orderBy = sortBy === "oldest" ? { createdAt: "asc" } : sortBy === "mostReported" ? { reports: { _count: "desc" } } : { createdAt: "desc" };
+    const [comments, totalItems] = await Promise.all([
+      prisma.comment.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy,
+        include: {
+          user: { select: { id: true, name: true, email: true, image: true } },
+          idea: { select: { id: true, title: true } },
+          reports: {
+            select: { id: true, status: true },
+            ...reportStatus && reportStatus !== "all" && {
+              where: { status: reportStatus }
+            }
+          }
+        }
+      }),
+      prisma.comment.count({ where })
+    ]);
+    const [totalComments, reportedComments, resolvedReports, dismissedReports, deletedComments] = await Promise.all([
+      prisma.comment.count(),
+      prisma.comment.count({ where: { reports: { some: {} } } }),
+      prisma.commentReport.count({ where: { status: "RESOLVED" } }),
+      prisma.commentReport.count({ where: { status: "DISMISSED" } }),
+      prisma.comment.count({ where: { isDeleted: true } })
+    ]);
+    return {
+      success: true,
+      data: {
+        comments: comments.map((c) => {
+          const pendingReportCount = c.reports.filter((r) => r.status === "PENDING").length;
+          const hasResolvedReports = c.reports.some((r) => r.status === "RESOLVED");
+          const hasDismissedReports = c.reports.some((r) => r.status === "DISMISSED");
+          return {
+            id: c.id,
+            content: c.content,
+            isDeleted: c.isDeleted,
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
+            user: c.user,
+            idea: c.idea,
+            reportCount: pendingReportCount,
+            hasResolvedReports,
+            hasDismissedReports
+          };
+        }),
+        stats: {
+          totalComments,
+          reportedComments,
+          resolvedReports,
+          dismissedReports,
+          deletedComments
+        },
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalItems / limit),
+          totalItems,
+          itemsPerPage: limit
+        }
+      }
+    };
+  } catch (error) {
+    console.error("Get admin comments error:", error);
+    return { success: false, message: "Failed to fetch comments" };
+  }
+};
+var getCommentReports = async (commentId) => {
+  try {
+    const reports = await prisma.commentReport.findMany({
+      where: { commentId },
+      include: { reporter: { select: { id: true, name: true, email: true, image: true } } },
+      orderBy: { createdAt: "desc" }
+    });
+    return {
+      success: true,
+      data: reports.map((r) => ({
+        id: r.id,
+        reason: r.reason,
+        status: r.status,
+        createdAt: r.createdAt,
+        reporter: r.reporter
+      }))
+    };
+  } catch (error) {
+    console.error("Get comment reports error:", error);
+    return { success: false, message: "Failed to fetch reports" };
+  }
+};
+var adminDeleteComment = async (commentId, adminId) => {
+  try {
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return { success: false, message: "Comment not found" };
+    await prisma.comment.update({ where: { id: commentId }, data: { isDeleted: true } });
+    await updateIdeaCommentCount(comment.ideaId, -1);
+    await logActivity(adminId, "DELETE_COMMENT", { commentId, ideaId: comment.ideaId, actionBy: "ADMIN" });
+    return { success: true, message: "Comment deleted successfully", data: { ideaId: comment.ideaId } };
+  } catch (error) {
+    console.error("Admin delete comment error:", error);
+    return { success: false, message: "Failed to delete comment" };
+  }
+};
+var adminRestoreComment = async (commentId, adminId) => {
+  try {
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return { success: false, message: "Comment not found" };
+    if (!comment.isDeleted) return { success: false, message: "Comment is not deleted" };
+    await prisma.comment.update({ where: { id: commentId }, data: { isDeleted: false } });
+    await updateIdeaCommentCount(comment.ideaId, 1);
+    await logActivity(adminId, "ADMIN_ACTION", { action: "RESTORE_COMMENT", commentId, ideaId: comment.ideaId });
+    return { success: true, message: "Comment restored successfully" };
+  } catch (error) {
+    console.error("Admin restore comment error:", error);
+    return { success: false, message: "Failed to restore comment" };
+  }
+};
+var adminResolveReports = async (commentId, adminId) => {
+  try {
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return { success: false, message: "Comment not found" };
+    await prisma.commentReport.updateMany({
+      where: {
+        commentId,
+        status: { in: ["PENDING", "DISMISSED"] }
+      },
+      data: { status: "RESOLVED", resolvedAt: /* @__PURE__ */ new Date(), moderatorId: adminId }
+    });
+    await logActivity(adminId, "ADMIN_ACTION", { action: "RESOLVE_REPORTS", commentId, ideaId: comment.ideaId });
+    return { success: true, message: "Reports resolved successfully" };
+  } catch (error) {
+    console.error("Admin resolve reports error:", error);
+    return { success: false, message: "Failed to resolve reports" };
+  }
+};
+var adminDismissReports = async (commentId, adminId) => {
+  try {
+    const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+    if (!comment) return { success: false, message: "Comment not found" };
+    await prisma.commentReport.updateMany({
+      where: {
+        commentId,
+        status: { in: ["PENDING", "RESOLVED"] }
+      },
+      data: { status: "DISMISSED", resolvedAt: /* @__PURE__ */ new Date(), moderatorId: adminId }
+    });
+    await logActivity(adminId, "ADMIN_ACTION", { action: "DISMISS_REPORTS", commentId, ideaId: comment.ideaId });
+    return { success: true, message: "Reports dismissed successfully" };
+  } catch (error) {
+    console.error("Admin dismiss reports error:", error);
+    return { success: false, message: "Failed to dismiss reports" };
+  }
+};
+var adminBulkAction = async (action, commentIds, adminId) => {
+  try {
+    const results = await Promise.all(
+      commentIds.map(async (commentId) => {
+        switch (action) {
+          case "delete":
+            return await adminDeleteComment(commentId, adminId);
+          case "restore":
+            return await adminRestoreComment(commentId, adminId);
+          case "resolve":
+            return await adminResolveReports(commentId, adminId);
+          case "dismiss":
+            return await adminDismissReports(commentId, adminId);
+          default:
+            return { success: false };
+        }
+      })
+    );
+    const successful = results.filter((r) => r.success).length;
+    const failed = results.filter((r) => !r.success).length;
+    return {
+      success: true,
+      message: `${successful} comment(s) ${action}ed successfully${failed > 0 ? `, ${failed} failed` : ""}`
+    };
+  } catch (error) {
+    console.error("Admin bulk action error:", error);
+    return { success: false, message: "Failed to perform bulk action" };
+  }
+};
+
+// src/modules/comment/controllers/admin-comment.controller.ts
+var getAdminCommentsController = async (req, res, next) => {
+  try {
+    const search = req.query.search;
+    const status = req.query.status;
+    const reportStatus = req.query.reportStatus;
+    const sortBy = req.query.sortBy;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 15;
+    const result = await getAdminComments({
+      search,
+      status,
+      reportStatus,
+      sortBy,
+      page,
+      limit
+    });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, result.data);
+  } catch (error) {
+    next(error);
+  }
+};
+var getCommentReportsController = async (req, res, next) => {
+  try {
+    const { commentId } = req.params;
+    const validationError = validateRequiredParams(res, { commentId }, ["commentId"]);
+    if (validationError) return validationError;
+    const result = await getCommentReports(commentId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, result.data);
+  } catch (error) {
+    next(error);
+  }
+};
+var adminDeleteCommentController = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const { commentId } = req.params;
+    const validationError = validateRequiredParams(res, { commentId }, ["commentId"]);
+    if (validationError) return validationError;
+    const result = await adminDeleteComment(commentId, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, null, result.message);
+  } catch (error) {
+    next(error);
+  }
+};
+var adminRestoreCommentController = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const { commentId } = req.params;
+    const validationError = validateRequiredParams(res, { commentId }, ["commentId"]);
+    if (validationError) return validationError;
+    const result = await adminRestoreComment(commentId, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, null, result.message);
+  } catch (error) {
+    next(error);
+  }
+};
+var adminResolveReportsController = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const { commentId } = req.params;
+    const validationError = validateRequiredParams(res, { commentId }, ["commentId"]);
+    if (validationError) return validationError;
+    const result = await adminResolveReports(commentId, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, null, result.message);
+  } catch (error) {
+    next(error);
+  }
+};
+var adminDismissReportsController = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const { commentId } = req.params;
+    const validationError = validateRequiredParams(res, { commentId }, ["commentId"]);
+    if (validationError) return validationError;
+    const result = await adminDismissReports(commentId, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, null, result.message);
+  } catch (error) {
+    next(error);
+  }
+};
+var adminBulkActionController = async (req, res, next) => {
+  try {
+    const adminId = req.user.id;
+    const { action, commentIds } = req.body;
+    const validationError = validateRequiredParams(res, { action, commentIds }, ["action", "commentIds"]);
+    if (validationError) return validationError;
+    if (!Array.isArray(commentIds) || commentIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "commentIds must be a non-empty array"
+      });
+    }
+    const validActions = ["delete", "restore", "resolve", "dismiss"];
+    if (!validActions.includes(action)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid action. Valid actions: ${validActions.join(", ")}`
+      });
+    }
+    const result = await adminBulkAction(action, commentIds, adminId);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    return sendSuccessResponse(res, null, result.message);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// src/modules/comment/comment.route.ts
 var router14 = express14.Router();
-router14.get("/idea/:ideaId", commentController.getComments);
+router14.get("/idea/:ideaId", getCommentsController);
 router14.use(auth_default(Role.MEMBER, Role.ADMIN));
-router14.get("/user/comments", commentController.getUserComments);
-router14.post("/idea/:ideaId", commentController.createComment);
-router14.patch("/:commentId", commentController.updateComment);
-router14.delete("/:commentId", commentController.deleteComment);
-router14.post("/:commentId/report", commentController.reportComment);
+router14.get("/user/comments", getUserCommentsController);
+router14.post("/idea/:ideaId", createCommentController);
+router14.patch("/:commentId", updateCommentController);
+router14.delete("/:commentId", deleteCommentController);
+router14.post("/:commentId/report", reportCommentController);
+router14.use(auth_default(Role.ADMIN));
+router14.get("/admin/comments", getAdminCommentsController);
+router14.get("/admin/comments/:commentId/reports", getCommentReportsController);
+router14.delete("/admin/comments/:commentId", adminDeleteCommentController);
+router14.patch("/admin/comments/:commentId/restore", adminRestoreCommentController);
+router14.patch("/admin/comments/:commentId/resolve", adminResolveReportsController);
+router14.patch("/admin/comments/:commentId/dismiss", adminDismissReportsController);
+router14.post("/admin/comments/bulk", adminBulkActionController);
 var commentRouter = router14;
 
 // src/app.ts

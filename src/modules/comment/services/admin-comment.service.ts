@@ -37,8 +37,8 @@ export const getAdminComments = async (params: {
         }
 
         const orderBy: any = sortBy === 'oldest' ? { createdAt: 'asc' } :
-                            sortBy === 'mostReported' ? { reports: { _count: 'desc' } } :
-                            { createdAt: 'desc' };
+            sortBy === 'mostReported' ? { reports: { _count: 'desc' } } :
+                { createdAt: 'desc' };
 
         const [comments, totalItems] = await Promise.all([
             prisma.comment.findMany({
@@ -60,27 +60,41 @@ export const getAdminComments = async (params: {
             prisma.comment.count({ where }),
         ]);
 
-        const [totalComments, reportedComments, resolvedReports, deletedComments] = await Promise.all([
+        const [totalComments, reportedComments, resolvedReports, dismissedReports, deletedComments] = await Promise.all([
             prisma.comment.count(),
             prisma.comment.count({ where: { reports: { some: {} } } }),
             prisma.commentReport.count({ where: { status: 'RESOLVED' } }),
+            prisma.commentReport.count({ where: { status: 'DISMISSED' } }),
             prisma.comment.count({ where: { isDeleted: true } }),
         ]);
 
         return {
             success: true,
             data: {
-                comments: comments.map(c => ({
-                    id: c.id,
-                    content: c.content,
-                    isDeleted: c.isDeleted,
-                    createdAt: c.createdAt,
-                    updatedAt: c.updatedAt,
-                    user: c.user,
-                    idea: c.idea,
-                    reportCount: c.reports.length,
-                })),
-                stats: { totalComments, reportedComments, resolvedReports, deletedComments },
+                comments: comments.map(c => {
+                    // Count only PENDING reports
+                    const pendingReportCount = c.reports.filter(r => r.status === 'PENDING').length;
+                    const hasResolvedReports = c.reports.some(r => r.status === 'RESOLVED');
+                    const hasDismissedReports = c.reports.some(r => r.status === 'DISMISSED');
+                    return {
+                        id: c.id,
+                        content: c.content,
+                        isDeleted: c.isDeleted,
+                        createdAt: c.createdAt,
+                        updatedAt: c.updatedAt,
+                        user: c.user,
+                        idea: c.idea,
+                        reportCount: pendingReportCount,
+                        hasResolvedReports: hasResolvedReports,
+                        hasDismissedReports: hasDismissedReports,
+                    };
+                }),
+                stats: { 
+                    totalComments, 
+                    reportedComments, 
+                    resolvedReports, 
+                    dismissedReports,
+                    deletedComments },
                 pagination: {
                     currentPage: page,
                     totalPages: Math.ceil(totalItems / limit),
@@ -158,7 +172,10 @@ export const adminResolveReports = async (commentId: string, adminId: string) =>
         if (!comment) return { success: false, message: "Comment not found" };
 
         await prisma.commentReport.updateMany({
-            where: { commentId, status: 'PENDING' },
+            where: {
+                commentId,
+                status: { in: ['PENDING', 'DISMISSED'] }
+            },
             data: { status: 'RESOLVED', resolvedAt: new Date(), moderatorId: adminId },
         });
         await logActivity(adminId, "ADMIN_ACTION", { action: "RESOLVE_REPORTS", commentId, ideaId: comment.ideaId });
@@ -170,6 +187,27 @@ export const adminResolveReports = async (commentId: string, adminId: string) =>
     }
 };
 
+export const adminDismissReports = async (commentId: string, adminId: string) => {
+    try {
+        const comment = await prisma.comment.findUnique({ where: { id: commentId } });
+        if (!comment) return { success: false, message: "Comment not found" };
+
+        await prisma.commentReport.updateMany({
+            where: {
+                commentId,
+                status: { in: ['PENDING', 'RESOLVED'] }
+            },
+            data: { status: 'DISMISSED', resolvedAt: new Date(), moderatorId: adminId },
+        });
+        await logActivity(adminId, "ADMIN_ACTION", { action: "DISMISS_REPORTS", commentId, ideaId: comment.ideaId });
+
+        return { success: true, message: "Reports dismissed successfully" };
+    } catch (error) {
+        console.error("Admin dismiss reports error:", error);
+        return { success: false, message: "Failed to dismiss reports" };
+    }
+};
+
 export const adminBulkAction = async (action: string, commentIds: string[], adminId: string) => {
     try {
         const results = await Promise.all(
@@ -178,6 +216,7 @@ export const adminBulkAction = async (action: string, commentIds: string[], admi
                     case "delete": return await adminDeleteComment(commentId, adminId);
                     case "restore": return await adminRestoreComment(commentId, adminId);
                     case "resolve": return await adminResolveReports(commentId, adminId);
+                    case "dismiss": return await adminDismissReports(commentId, adminId);
                     default: return { success: false };
                 }
             })

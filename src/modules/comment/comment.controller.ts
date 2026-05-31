@@ -13,5 +13,6 @@ export {
     adminDeleteCommentController as adminDeleteComment,
     adminRestoreCommentController as adminRestoreComment,
     adminResolveReportsController as adminResolveReports,
+    adminDismissReportsController as adminDismissReports,
     adminBulkActionController as adminBulkAction,
 } from "./controllers/admin-comment.controller";
