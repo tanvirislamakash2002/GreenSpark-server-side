@@ -6,4 +6,5 @@ node_modules
 
 .vercel
 
-api
+/api
+api/server.js

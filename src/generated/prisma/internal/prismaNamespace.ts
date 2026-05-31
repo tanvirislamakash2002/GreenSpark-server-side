@@ -397,6 +397,7 @@ export const ModelName = {
   CommentReport: 'CommentReport',
   Idea: 'Idea',
   Newsletter: 'Newsletter',
+  NewsletterCampaign: 'NewsletterCampaign',
   Payment: 'Payment',
   Vote: 'Vote'
 } as const
@@ -414,7 +415,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "activityLog" | "adminPreferences" | "user" | "session" | "account" | "verification" | "bookmark" | "category" | "ideaCategory" | "comment" | "commentReport" | "idea" | "newsletter" | "payment" | "vote"
+    modelProps: "activityLog" | "adminPreferences" | "user" | "session" | "account" | "verification" | "bookmark" | "category" | "ideaCategory" | "comment" | "commentReport" | "idea" | "newsletter" | "newsletterCampaign" | "payment" | "vote"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -1380,6 +1381,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    NewsletterCampaign: {
+      payload: Prisma.$NewsletterCampaignPayload<ExtArgs>
+      fields: Prisma.NewsletterCampaignFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.NewsletterCampaignFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NewsletterCampaignPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.NewsletterCampaignFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NewsletterCampaignPayload>
+        }
+        findFirst: {
+          args: Prisma.NewsletterCampaignFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NewsletterCampaignPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.NewsletterCampaignFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NewsletterCampaignPayload>
+        }
+        findMany: {
+          args: Prisma.NewsletterCampaignFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NewsletterCampaignPayload>[]
+        }
+        create: {
+          args: Prisma.NewsletterCampaignCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NewsletterCampaignPayload>
+        }
+        createMany: {
+          args: Prisma.NewsletterCampaignCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.NewsletterCampaignCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NewsletterCampaignPayload>[]
+        }
+        delete: {
+          args: Prisma.NewsletterCampaignDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NewsletterCampaignPayload>
+        }
+        update: {
+          args: Prisma.NewsletterCampaignUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NewsletterCampaignPayload>
+        }
+        deleteMany: {
+          args: Prisma.NewsletterCampaignDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.NewsletterCampaignUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.NewsletterCampaignUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NewsletterCampaignPayload>[]
+        }
+        upsert: {
+          args: Prisma.NewsletterCampaignUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$NewsletterCampaignPayload>
+        }
+        aggregate: {
+          args: Prisma.NewsletterCampaignAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateNewsletterCampaign>
+        }
+        groupBy: {
+          args: Prisma.NewsletterCampaignGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.NewsletterCampaignGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.NewsletterCampaignCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.NewsletterCampaignCountAggregateOutputType> | number
+        }
+      }
+    }
     Payment: {
       payload: Prisma.$PaymentPayload<ExtArgs>
       fields: Prisma.PaymentFieldRefs
@@ -1754,6 +1829,20 @@ export const NewsletterScalarFieldEnum = {
 export type NewsletterScalarFieldEnum = (typeof NewsletterScalarFieldEnum)[keyof typeof NewsletterScalarFieldEnum]
 
 
+export const NewsletterCampaignScalarFieldEnum = {
+  id: 'id',
+  subject: 'subject',
+  content: 'content',
+  recipients: 'recipients',
+  sentBy: 'sentBy',
+  sentAt: 'sentAt',
+  status: 'status',
+  scheduledFor: 'scheduledFor'
+} as const
+
+export type NewsletterCampaignScalarFieldEnum = (typeof NewsletterCampaignScalarFieldEnum)[keyof typeof NewsletterCampaignScalarFieldEnum]
+
+
 export const PaymentScalarFieldEnum = {
   id: 'id',
   amount: 'amount',
@@ -1981,6 +2070,20 @@ export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel,
 
 
 /**
+ * Reference to a field of type 'CampaignStatus'
+ */
+export type EnumCampaignStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CampaignStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'CampaignStatus[]'
+ */
+export type ListEnumCampaignStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'CampaignStatus[]'>
+    
+
+
+/**
  * Reference to a field of type 'PaymentStatus'
  */
 export type EnumPaymentStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'PaymentStatus'>
@@ -2129,6 +2232,7 @@ export type GlobalOmitConfig = {
   commentReport?: Prisma.CommentReportOmit
   idea?: Prisma.IdeaOmit
   newsletter?: Prisma.NewsletterOmit
+  newsletterCampaign?: Prisma.NewsletterCampaignOmit
   payment?: Prisma.PaymentOmit
   vote?: Prisma.VoteOmit
 }

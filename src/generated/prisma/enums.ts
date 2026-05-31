@@ -68,6 +68,15 @@ export const IdeaStatus = {
 export type IdeaStatus = (typeof IdeaStatus)[keyof typeof IdeaStatus]
 
 
+export const CampaignStatus = {
+  DRAFT: 'DRAFT',
+  SENT: 'SENT',
+  SCHEDULED: 'SCHEDULED'
+} as const
+
+export type CampaignStatus = (typeof CampaignStatus)[keyof typeof CampaignStatus]
+
+
 export const PaymentStatus = {
   PENDING: 'PENDING',
   COMPLETED: 'COMPLETED',

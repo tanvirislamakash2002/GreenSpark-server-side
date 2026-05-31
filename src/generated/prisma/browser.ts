@@ -83,6 +83,11 @@ export type Idea = Prisma.IdeaModel
  */
 export type Newsletter = Prisma.NewsletterModel
 /**
+ * Model NewsletterCampaign
+ * 
+ */
+export type NewsletterCampaign = Prisma.NewsletterCampaignModel
+/**
  * Model Payment
  * 
  */

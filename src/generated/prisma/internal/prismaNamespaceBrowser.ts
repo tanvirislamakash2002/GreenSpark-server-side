@@ -64,6 +64,7 @@ export const ModelName = {
   CommentReport: 'CommentReport',
   Idea: 'Idea',
   Newsletter: 'Newsletter',
+  NewsletterCampaign: 'NewsletterCampaign',
   Payment: 'Payment',
   Vote: 'Vote'
 } as const
@@ -269,6 +270,20 @@ export const NewsletterScalarFieldEnum = {
 } as const
 
 export type NewsletterScalarFieldEnum = (typeof NewsletterScalarFieldEnum)[keyof typeof NewsletterScalarFieldEnum]
+
+
+export const NewsletterCampaignScalarFieldEnum = {
+  id: 'id',
+  subject: 'subject',
+  content: 'content',
+  recipients: 'recipients',
+  sentBy: 'sentBy',
+  sentAt: 'sentAt',
+  status: 'status',
+  scheduledFor: 'scheduledFor'
+} as const
+
+export type NewsletterCampaignScalarFieldEnum = (typeof NewsletterCampaignScalarFieldEnum)[keyof typeof NewsletterCampaignScalarFieldEnum]
 
 
 export const PaymentScalarFieldEnum = {

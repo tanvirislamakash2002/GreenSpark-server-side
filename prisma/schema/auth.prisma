@@ -28,7 +28,8 @@ model User {
   comments                Comment[]
   payments                Payment[]
   bookmarks               Bookmark[]
-  newsletterSubscriptions Newsletter[]
+  newsletterSubscriptions Newsletter[] 
+  sentCampaigns           NewsletterCampaign[]
   commentReports          CommentReport[] @relation("ReporterReports")
   moderatedReports        CommentReport[] @relation("ModeratorReports")
   activityLogs            ActivityLog[]
