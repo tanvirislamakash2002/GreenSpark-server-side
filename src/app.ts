@@ -19,7 +19,7 @@ import { userManagementRouter } from "./modules/users/user-management.route";
 import { paymentRouter } from "./modules/payment/payment.route";
 import { optionalAuth } from "./middlewares/optionalAuth";
 import { PaymentController } from "./modules/payment/payment.controller";
-import { commentRouter } from "./modules/comments/comment.route";
+import { commentRouter } from "./modules/comment/comment.route";
 
 const app: Application = express()
 
