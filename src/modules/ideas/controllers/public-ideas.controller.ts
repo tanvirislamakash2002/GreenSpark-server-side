@@ -7,7 +7,7 @@ const getIdeas = async (req: Request, res: Response, next: NextFunction) => {
         const limit = parseInt(req.query.limit as string) || 12;
         const search = req.query.search as string;
         const category = req.query.category as string;
-        const status = req.query.status as string;
+        const paymentStatus = req.query.status as string;
         const sortBy = req.query.sortBy as 'recent' | 'topVoted' | 'mostViewed' || 'recent';
 
         const result = await publicIdeasService.getIdeas({
@@ -15,7 +15,7 @@ const getIdeas = async (req: Request, res: Response, next: NextFunction) => {
             limit,
             search,
             category,
-            status,
+            paymentStatus,
             sortBy,
         });
 

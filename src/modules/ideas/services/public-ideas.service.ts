@@ -6,21 +6,22 @@ const getIdeas = async (params: {
     limit: number;
     search?: string;
     category?: string;
-    status?: string;
+    paymentStatus?: string;
     sortBy: 'recent' | 'topVoted' | 'mostViewed';
 }) => {
     try {
-        const { page, limit, search, category, status, sortBy } = params;
+        const { page, limit, search, category, paymentStatus, sortBy } = params;
         const skip = (page - 1) * limit;
 
         // Build where clause
         const where: Prisma.IdeaWhereInput = {};
 
-        // Only show approved ideas for public
-        if (!status) {
-            where.status = 'APPROVED';
-        } else if (status !== 'all') {
-            where.status = status as any;
+        where.status = 'APPROVED';
+
+        if (paymentStatus === 'free') {
+            where.isPaid = false;
+        } else if (paymentStatus === 'paid') {
+            where.isPaid = true;
         }
 
         if (search) {
@@ -265,7 +266,7 @@ const getIdeaById = async (id: string, userId?: string) => {
 
         // Check if user has full access
         let hasFullAccess = false;
-        
+
         if (idea.isPaid && idea.status === "APPROVED") {
             // Check if user is logged in and has paid
             if (userId) {

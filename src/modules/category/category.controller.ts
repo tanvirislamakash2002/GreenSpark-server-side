@@ -6,8 +6,8 @@ const getCategories = async (req: Request, res: Response, next: NextFunction) =>
         const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
         const search = req.query.search as string;
-        const sortBy = req.query.sortBy as 'name' | 'ideasCount' | 'createdAt' || 'name';
-        const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'asc';
+        const sortBy = req.query.sortBy as 'name' | 'ideasCount' | 'createdAt' || 'createdAt'; 
+        const sortOrder = req.query.sortOrder as 'asc' | 'desc' || 'desc';
 
         const result = await categoryService.getCategories({
             page,

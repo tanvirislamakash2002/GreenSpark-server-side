@@ -1,13 +1,12 @@
 model Newsletter {
-  id              String    @id @default(uuid())
-  email           String    @unique
-  isSubscribed    Boolean   @default(true)
-  subscribedAt    DateTime  @default(now())
-  unsubscribedAt  DateTime?
+  id             String    @id @default(uuid())
+  email          String    @unique
+  isSubscribed   Boolean   @default(true)
+  subscribedAt   DateTime  @default(now())
+  unsubscribedAt DateTime?
 
-  // Optional: track which user (if registered)
-  userId          String?
-  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([email])
   @@index([isSubscribed])
@@ -15,16 +14,16 @@ model Newsletter {
 }
 
 model NewsletterCampaign {
-  id          String         @id @default(uuid())
-  subject     String
-  content     String         @db.Text
-  recipients  Int
-  sentBy      String
-  sentAt      DateTime       @default(now())
-  status      CampaignStatus @default(SENT)
+  id           String         @id @default(uuid())
+  subject      String
+  content      String         @db.Text
+  recipients   Int
+  sentBy       String
+  sentAt       DateTime       @default(now())
+  status       CampaignStatus @default(SENT)
   scheduledFor DateTime?
-  
-  sentByUser  User           @relation(fields: [sentBy], references: [id], onDelete: SetNull)
+
+  sentByUser User @relation(fields: [sentBy], references: [id], onDelete: Cascade)
 
   @@index([sentAt])
   @@index([status])

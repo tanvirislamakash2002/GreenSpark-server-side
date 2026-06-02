@@ -8,3 +8,5 @@ node_modules
 
 /api
 api/server.js
+
+migrations
