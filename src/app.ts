@@ -85,6 +85,12 @@ app.use("/api/v1/newsletter", newsletterRouter);
 app.get("/", (req, res) => {
     res.send("Hello, World!")
 })
+app.post("/", (req, res) => {
+    console.log("Received POST to root");
+    console.log("Body:", req.body);
+    console.log("Headers:", req.headers);
+    res.status(200).json({ received: true });
+});
 app.use(notFound)
 app.use(errorHandler)
 

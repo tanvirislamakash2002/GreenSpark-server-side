@@ -39,28 +39,35 @@ const createPaymentIntent = async (req: Request, res: Response, next: NextFuncti
 };
 
 const handleWebhook = async (req: Request, res: Response, next: NextFunction) => {
-
+    console.log("=== WEBHOOK CALLED ===");
+    console.log("Content-Type:", req.headers["content-type"]);
+    
+    // For raw body, req.body is already a Buffer or string
+    let rawBody = req.body;
+    if (Buffer.isBuffer(rawBody)) {
+        rawBody = rawBody.toString("utf8");
+    }
+    
+    let event;
+    const sig = req.headers["stripe-signature"] as string;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
+    
     try {
-        const sig = req.headers["stripe-signature"] as string;
-        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
-
-        let event;
-
-        try {
-            event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-        } catch (err) {
-            return res.status(400).json({ success: false, message: "Invalid signature" });
-        }
-
-        try {
-            const result = await PaymentService.handleStripeWebhookEvent(event);
-            return res.status(200).json(result);
-        } catch (error) {
-            // Return 200 to avoid Stripe retries (we'll fix the issue)
-            return res.status(200).json({ success: false, message: "Processing error but acknowledged" });
-        }
+        // Construct the event using Stripe's library
+        event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+        console.log("✅ Event type:", event.type);
+    } catch (err) {
+        console.error("❌ Signature verification failed:", err);
+        return res.status(400).json({ success: false, message: "Invalid signature" });
+    }
+    
+    try {
+        const result = await PaymentService.handleStripeWebhookEvent(event);
+        console.log("Webhook processing result:", result);
+        return res.status(200).json(result);
     } catch (error) {
-        next(error);
+        console.error("Error processing webhook:", error);
+        return res.status(200).json({ success: false, message: "Processing error but acknowledged" });
     }
 };
 

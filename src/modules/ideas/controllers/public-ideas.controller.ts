@@ -90,6 +90,8 @@ const getIdeaById = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { id } = req.params;
         const userId = req.user?.id;
+        const userRole = req.user?.role;
+
         if (!id || typeof id !== 'string') {
             return res.status(400).json({
                 success: false,
@@ -97,7 +99,7 @@ const getIdeaById = async (req: Request, res: Response, next: NextFunction) => {
             });
         }
 
-        const result = await publicIdeasService.getIdeaById(id, userId);
+        const result = await publicIdeasService.getIdeaById(id, userId, userRole);
 
         if (!result.success) {
             return res.status(404).json(result);
@@ -115,7 +117,7 @@ const getIdeaById = async (req: Request, res: Response, next: NextFunction) => {
 const getIdeaBySlug = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { slug } = req.params;
-        
+
         if (!slug || typeof slug !== 'string') {
             return res.status(400).json({
                 success: false,

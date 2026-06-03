@@ -238,7 +238,7 @@ const getRecentIdeas = async (limit: number) => {
     }
 };
 
-const getIdeaById = async (id: string, userId?: string) => {
+const getIdeaById = async (id: string, userId?: string, userRole?: string) => {
     try {
         const idea = await prisma.idea.findUnique({
             where: { id },
@@ -266,8 +266,11 @@ const getIdeaById = async (id: string, userId?: string) => {
 
         // Check if user has full access
         let hasFullAccess = false;
-
-        if (idea.isPaid && idea.status === "APPROVED") {
+        
+        if (userRole === "ADMIN" || userId === idea?.author?.id) {
+            hasFullAccess = true;
+        }
+        else if (idea.isPaid && idea.status === "APPROVED") {
             // Check if user is logged in and has paid
             if (userId) {
                 const payment = await prisma.payment.findFirst({
